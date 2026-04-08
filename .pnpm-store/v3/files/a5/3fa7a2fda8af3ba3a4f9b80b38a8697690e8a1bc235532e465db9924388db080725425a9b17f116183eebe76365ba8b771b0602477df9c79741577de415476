@@ -1,0 +1,41 @@
+import { resolvePath } from '@shopify/cli-kit/node/path';
+import { readFile, writeFile, isDirectory, fileExists } from '@shopify/cli-kit/node/fs';
+import { readdir } from 'fs/promises';
+import { formatCode } from './format-code.js';
+
+async function replaceFileContent(filepath, formatConfig, replacer) {
+  let content = await replacer(await readFile(filepath));
+  if (typeof content !== "string")
+    return;
+  if (formatConfig) {
+    content = formatCode(content, formatConfig, filepath);
+  }
+  return writeFile(filepath, content);
+}
+const DEFAULT_EXTENSIONS = ["tsx", "ts", "jsx", "js", "mjs", "cjs"];
+async function findFileWithExtension(directory, fileBase, extensions = DEFAULT_EXTENSIONS) {
+  const dirFiles = await readdir(directory);
+  if (dirFiles.includes(fileBase)) {
+    const filepath = resolvePath(directory, fileBase);
+    if (!await isDirectory(filepath)) {
+      return { filepath };
+    }
+    for (const extension of ["ts", "js"]) {
+      const filepath2 = resolvePath(directory, `${fileBase}/index.${extension}`);
+      if (await fileExists(resolvePath(directory, filepath2))) {
+        return { filepath: filepath2, extension, astType: extension };
+      }
+    }
+  } else {
+    for (const extension of extensions) {
+      const filename = `${fileBase}.${extension}`;
+      if (dirFiles.includes(filename)) {
+        const astType = extension === "mjs" || extension === "cjs" ? "js" : extension;
+        return { filepath: resolvePath(directory, filename), extension, astType };
+      }
+    }
+  }
+  return {};
+}
+
+export { findFileWithExtension, replaceFileContent };

@@ -1,0 +1,421 @@
+import { createStorefrontClient, SHOPIFY_STOREFRONT_ID_HEADER, getShopifyCookies, SHOPIFY_Y, SHOPIFY_STOREFRONT_Y_HEADER, SHOPIFY_S, SHOPIFY_STOREFRONT_S_HEADER, flattenConnection } from '@shopify/hydrogen-react';
+export { AnalyticsEventName, AnalyticsPageType, ExternalVideo, IMAGE_FRAGMENT, Image, MediaFile, ModelViewer, Money, ShopPayButton, ShopifySalesChannel, Video, flattenConnection, getClientBrowserParameters, getShopifyCookies, parseGid, parseMetafield, sendShopifyAnalytics, storefrontApiCustomScalars, useLoadScript, useMoney, useShopifyCookies } from '@shopify/hydrogen-react';
+import { redirect } from '@remix-run/server-runtime';
+import { lazy, useMemo, createElement, Suspense, Fragment } from 'react';
+import { useMatches, useLocation, useNavigation, Link, useFetcher } from '@remix-run/react';
+import { jsxs, jsx } from 'react/jsx-runtime';
+
+function ge(e){let t=Array.isArray(e)?e:[e],a="";for(let r of t)r!=null&&(typeof r=="object"?!!r.body&&typeof r.body=="string"?a+=r.body:a+=JSON.stringify(r):a+=r);return encodeURIComponent(a)}var k="public",Be="private",_="no-store",me={maxAge:"max-age",staleWhileRevalidate:"stale-while-revalidate",sMaxAge:"s-maxage",staleIfError:"stale-if-error"};function b(e){let t=[];return Object.keys(e).forEach(a=>{a==="mode"?t.push(e[a]):me[a]&&t.push(`${me[a]}=${e[a]}`);}),t.join(", ")}function Q(){return {mode:_}}function Ce(e){if(e?.mode&&e?.mode!==k&&e?.mode!==Be)throw Error("'mode' must be either 'public' or 'private'")}function I(e){return Ce(e),{mode:k,maxAge:1,staleWhileRevalidate:9,...e}}function H(e){return Ce(e),{mode:k,maxAge:3600,staleWhileRevalidate:82800,...e}}function G(e){return e}function U(e){return String(e).includes("__proto__")?JSON.parse(e,We):JSON.parse(e)}function We(e,t){if(e!=="__proto__")return t}function w(e,t){return e&&t?{...e,...t}:e||I()}function V(e){return b(w(e))}async function je(e,t){if(!e)return;let a=await e.match(t);if(!a){return}return a}async function Je(e,t,a,r){if(!e)return;let i=w(r),n=V(w(i,{maxAge:(i.maxAge||0)+(i.staleWhileRevalidate||0)})),o=V(w(i));a.headers.set("cache-control",n),a.headers.set("real-cache-control",o),a.headers.set("cache-put-date",new Date().toUTCString()),await e.put(t,a);}async function Ke(e,t){!e||await e.delete(t);}function Ye(e,t){let a=e.headers.get("real-cache-control"),r=0;if(a){let n=a.match(/max-age=(\d*)/);n&&n.length>1&&(r=parseFloat(n[1]));}return [(new Date().valueOf()-new Date(t).valueOf())/1e3,r]}function ze(e,t){let a=t.headers.get("cache-put-date");if(!a)return !1;let[r,i]=Ye(t,a),n=r>i;return n}var E={get:je,set:Je,delete:Ke,generateDefaultCacheControlHeader:V,isStale:ze};function B(e){return `https://shopify.dev/?${e}`}function Xe(e){return e||I()}async function he(e,t){if(!e)return;let a=B(t),r=new Request(a),i=await E.get(e,r);if(!i)return;let n=await i.text();try{return [U(n),i]}catch{return [n,i]}}async function W(e,t,a,r){if(!e)return;let i=B(t),n=new Request(i),o=new Response(JSON.stringify(a));await E.set(e,n,o,Xe(r));}function Se(e,t){return E.isStale(new Request(B(e)),t)}function Ze(e,t){return [e,{status:t.status,statusText:t.statusText,headers:Array.from(t.headers.entries())}]}function Ie([e,t]){return [e,new Response(e,t)]}var Re=e=>!e?.errors,j=new Set;async function J(e,t,{strategy:a=I(),cacheInstance:r,shouldCacheResult:i=()=>!0,waitUntil:n}){if(!r||!a||a.mode===_)return t();let o=ge([...typeof e=="string"?[e]:e]),s=await he(r,o);if(s){let[c,p]=s;if(!j.has(o)&&Se(o,p)){j.add(o);let d=Promise.resolve().then(async()=>{try{let l=await t();i(l)&&await W(r,o,l,a);}catch(l){l.message&&(l.message="SWR in sub-request failed: "+l.message),console.error(l);}finally{j.delete(o);}});n?.(d);}return c}let u=await t();if(i(u)){let c=W(r,o,u,a);n?.(c);}return u}async function Te(e,t,{cacheInstance:a,cache:r,cacheKey:i=[e,t],shouldCacheResponse:n=()=>!0,waitUntil:o,returnType:s="json"}={}){return !r&&(!t.method||t.method==="GET")&&(r=I()),J(i,async()=>{let u=await fetch(e,t),c;try{c=await u[s]();}catch{try{c=await u.text();}catch{throw new Error(`Storefront API response code: ${u.status} (Request Id: ${u.headers.get("x-request-id")})`)}}return Ze(c,u)},{cacheInstance:a,waitUntil:o,strategy:r??null,shouldCacheResult:u=>n(...Ie(u))}).then(Ie)}var xe="Custom-Storefront-Request-Group-ID";function Ae(){return typeof crypto<"u"&&!!crypto.randomUUID?crypto.randomUUID():`weak-${Math.random().toString(16).substring(2)}`}var K="2023.7.2";var Me=class extends Error{},ot=e=>e instanceof Me,it=/(^|}\s)query[\s({]/im,st=/(^|}\s)mutation[\s({]/im;function be(e){return e.replace(/\s*#.*$/gm,"").replace(/\s+/gm," ").trim()}var ut={language:"EN",country:"US"};function Pr(e){let {storefrontHeaders:t,cache:a,waitUntil:r,buyerIp:i,i18n:n,requestGroupId:o,storefrontId:s,...u}=e,{getPublicTokenHeaders:p,getPrivateTokenHeaders:d,getStorefrontApiUrl:l,getShopifyDomain:h}=createStorefrontClient(u),m=(u.privateStorefrontToken?d:p)({contentType:"json",buyerIp:t?.buyerIp||i});if(m[xe]=t?.requestGroupId||o||Ae(),s&&(m[SHOPIFY_STOREFRONT_ID_HEADER]=s),(m["user-agent"]=`Hydrogen ${K}`),t&&t.cookie){let y=getShopifyCookies(t.cookie??"");y[SHOPIFY_Y]&&(m[SHOPIFY_STOREFRONT_Y_HEADER]=y[SHOPIFY_Y]),y[SHOPIFY_S]&&(m[SHOPIFY_STOREFRONT_S_HEADER]=y[SHOPIFY_S]);}async function O({query:y,mutation:S,variables:A,cache:ke,headers:P=[],storefrontApiVersion:_e}){let Qe=P instanceof Headers?Object.fromEntries(P.entries()):Array.isArray(P)?Object.fromEntries(P):P;y=y??S;let M={...A};n&&(!A?.country&&/\$country/.test(y)&&(M.country=n.country),!A?.language&&/\$language/.test(y)&&(M.language=n.language));let He=l({storefrontApiVersion:_e}),Ge={method:"POST",headers:{...m,...Qe},body:JSON.stringify({query:y,variables:M})},[$,le]=await Te(He,Ge,{cacheInstance:S?void 0:a,cache:ke||I(),shouldCacheResponse:Re,waitUntil:r}),ye={response:le,type:S?"mutation":"query",query:y,queryVariables:M,errors:void 0};if(!le.ok){let q;try{q=U($);}catch{q=[{message:$}];}De({...ye,errors:q});}let{data:Ve,errors:fe}=$;return fe?.length&&De({...ye,errors:fe,ErrorConstructor:Me}),Ve}return {storefront:{query:(y,S)=>{if(y=be(y),st.test(y))throw new Error("[h2:error:storefront.query] Cannot execute mutations");return O({...S,query:y})},mutate:(y,S)=>{if(y=be(y),it.test(y))throw new Error("[h2:error:storefront.mutate] Cannot execute queries");return O({...S,mutation:y})},cache:a,CacheNone:Q,CacheLong:H,CacheShort:I,CacheCustom:G,generateCacheControlHeader:b,getPublicTokenHeaders:p,getPrivateTokenHeaders:d,getShopifyDomain:h,getApiUrl:l,isApiError:ot,i18n:n??ut}}}function De({response:e,errors:t,type:a,query:r,queryVariables:i,ErrorConstructor:n=Error}){let o=e.headers.get("x-request-id"),s=(typeof t=="string"?t:t?.map?.(u=>u.message).join(`
+`))||`API response error: ${e.status}`;throw new n(`[h2:error:storefront.${a}] `+s+(o?` - Request ID: ${o}`:""),{cause:{errors:t,requestId:o}})}function Ur(e){let{cache:t,waitUntil:a}=e;return function(i,n,o){return J(i,o,{strategy:n,cacheInstance:t,waitUntil:a})}}var Y=class{#e;constructor(){this.#e=new Map;}add(t){throw new Error("Method not implemented. Use `put` instead.")}addAll(t){throw new Error("Method not implemented. Use `put` instead.")}matchAll(t,a){throw new Error("Method not implemented. Use `match` instead.")}async put(t,a){if(t.method!=="GET")throw new TypeError("Cannot cache response to non-GET request.");if(a.status===206)throw new TypeError("Cannot cache response to a range request (206 Partial Content).");if(a.headers.get("vary")?.includes("*"))throw new TypeError("Cannot cache response with 'Vary: *' header.");this.#e.set(t.url,{body:new Uint8Array(await a.arrayBuffer()),status:a.status,headers:[...a.headers],timestamp:Date.now()});}async match(t){if(t.method!=="GET")return;let a=this.#e.get(t.url);if(!a)return;let{body:r,timestamp:i,...n}=a,o=new Headers(n.headers),s=o.get("cache-control")||o.get("real-cache-control")||"",u=parseInt(s.match(/max-age=(\d+)/)?.[1]||"0",10),c=parseInt(s.match(/stale-while-revalidate=(\d+)/)?.[1]||"0",10),p=(Date.now()-i)/1e3;if(p>u+c){this.#e.delete(t.url);return}let l=p>u;return o.set("cache",l?"STALE":"HIT"),o.set("date",new Date(i).toUTCString()),new Response(r,{status:n.status??200,headers:o})}async delete(t){return this.#e.has(t.url)?(this.#e.delete(t.url),!0):!1}keys(t){let a=[];for(let r of this.#e.keys())(!t||t.url===r)&&a.push(new Request(r));return Promise.resolve(a)}};async function pt(e){let{storefront:t,request:a,noAdminRedirect:r,response:i=new Response("Not Found",{status:404})}=e,{pathname:n,search:o}=new URL(a.url),s=n+o;if(n==="/admin"&&!r)return redirect(`${t.getShopifyDomain()}/admin`);try{let{urlRedirects:u}=await t.query(dt,{variables:{query:"path:"+s}}),c=u?.edges?.[0]?.node?.target;if(c)return new Response(null,{status:301,headers:{location:c}});let p=new URLSearchParams(o),d=p.get("return_to")||p.get("redirect");if(d){if(ct(d))return redirect(d);console.warn(`Cross-domain redirects are not supported. Tried to redirect from ${s} to ${d}`);}}catch(u){console.error(`Failed to fetch redirects from Storefront API for route ${s}`,u);}return i}function ct(e){try{new URL(e);}catch{return !0}return !1}var dt=`#graphql
+  query redirects($query: String) {
+    urlRedirects(first: 1, query: $query) {
+      edges {
+        node {
+          target
+        }
+      }
+    }
+  }
+`;var lt=async function({context:t}){let a=t?.storefront;if(!a)throw new Error("GraphiQL: Hydrogen's storefront client must be injected in the loader context.");let r=a.getApiUrl(),i=a.getPublicTokenHeaders()["X-Shopify-Storefront-Access-Token"],n="https://avatars.githubusercontent.com/u/12972006?s=48&v=4";return new Response(`
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>GraphiQL</title>
+    <link rel="icon" type="image/x-icon" href="${n}">
+    <style>
+      body {
+        height: 100%;
+        margin: 0;
+        width: 100%;
+        overflow: hidden;
+      }
+
+      #graphiql {
+        height: 100vh;
+      }
+    </style>
+
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.development.js"
+    ><\/script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
+    ><\/script>
+    <link rel="stylesheet" href="https://unpkg.com/graphiql@3/graphiql.min.css" />
+  </head>
+
+  <body>
+    <div id="graphiql">Loading...</div>
+    <script
+      src="https://unpkg.com/graphiql@3/graphiql.min.js"
+      type="application/javascript"
+    ><\/script>
+    <script>
+      const windowUrl = new URL(document.URL);
+
+      let query = '{\\n  shop {\\n    name\\n  }\\n}';
+      if (windowUrl.searchParams.has('query')) {
+        query = decodeURIComponent(windowUrl.searchParams.get('query') ?? '');
+        // Prettify query
+        if (query) query = GraphiQL.GraphQL.print(GraphiQL.GraphQL.parse(query));
+      }
+
+      let variables;
+      if (windowUrl.searchParams.has('variables')) {
+        variables = decodeURIComponent(windowUrl.searchParams.get('variables') ?? '');
+        // Prettify variables
+        if (variables) variables = JSON.stringify(JSON.parse(variables), null, 2);
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById('graphiql'));
+      root.render(
+        React.createElement(GraphiQL, {
+          fetcher: GraphiQL.createFetcher({
+            url: '${r}',
+            headers: {'X-Shopify-Storefront-Access-Token': '${i}'}
+          }),
+          defaultEditorToolsVisibility: true,
+          query,
+          variables
+        }),
+      );
+    <\/script>
+  </body>
+</html>
+  `,{status:200,headers:{"content-type":"text/html"}})};var T="Error in SEO input: ",L={title:{validate:e=>{if(typeof e!="string")throw new Error(T.concat("`title` should be a string"));if(typeof e=="string"&&e.length>120)throw new Error(T.concat("`title` should not be longer than 120 characters"));return e}},description:{validate:e=>{if(typeof e!="string")throw new Error(T.concat("`description` should be a string"));if(typeof e=="string"&&e.length>155)throw new Error(T.concat("`description` should not be longer than 155 characters"));return e}},url:{validate:e=>{if(typeof e!="string")throw new Error(T.concat("`url` should be a string"));if(typeof e=="string"&&!e.startsWith("http"))throw new Error(T.concat("`url` should be a valid URL"));return e}},handle:{validate:e=>{if(typeof e!="string")throw new Error(T.concat("`handle` should be a string"));if(typeof e=="string"&&!e.startsWith("@"))throw new Error(T.concat("`handle` should start with `@`"));return e}}};function we(e){let t=[];for(let a of Object.keys(e))switch(a){case"title":{let r=v(L.title,e.title),i=yt(e?.titleTemplate,r);if(!i)break;t.push(C("title",{title:i}),C("meta",{property:"og:title",content:i}),C("meta",{name:"twitter:title",content:i}));break}case"description":{let r=v(L.description,e.description);if(!r)break;t.push(C("meta",{name:"description",content:r}),C("meta",{property:"og:description",content:r}),C("meta",{name:"twitter:description",content:r}));break}case"url":{let r=v(L.url,e.url);if(!r)break;t.push(C("link",{rel:"canonical",href:r}),C("meta",{property:"og:url",content:r}));break}case"handle":{let r=v(L.handle,e.handle);if(!r)break;t.push(C("meta",{name:"twitter:site",content:r}),C("meta",{name:"twitter:creator",content:r}));break}case"media":{let r,i=X(e.media);for(let n of i)if(typeof n=="string"&&t.push(C("meta",{name:"og:image",content:n})),n&&typeof n=="object"){let o=n.type||"image",s=n?{url:n?.url,secure_url:n?.url,type:ft(n.url),width:n?.width,height:n?.height,alt:n?.altText}:{};for(let u of Object.keys(s))s[u]&&(r=s[u],t.push(C("meta",{property:`og:${o}:${u}`,content:r},s.url)));}break}case"jsonLd":{let r=X(e.jsonLd),i=0;for(let n of r){if(typeof n!="object")continue;let o=C("script",{type:"application/ld+json",children:JSON.stringify(n)},`json-ld-${n?.["@type"]||n?.name||i++}`);t.push(o);}break}case"alternates":{let r=X(e.alternates);for(let i of r){if(!i)continue;let{language:n,url:o,default:s}=i,u=n?`${n}${s?"-default":""}`:void 0;t.push(C("link",{rel:"alternate",hrefLang:u,href:o}));}break}case"robots":{if(!e.robots)break;let{maxImagePreview:r,maxSnippet:i,maxVideoPreview:n,noArchive:o,noFollow:s,noImageIndex:u,noIndex:c,noSnippet:p,noTranslate:d,unavailableAfter:l}=e.robots,h=[o&&"noarchive",u&&"noimageindex",p&&"nosnippet",d&&"notranslate",r&&`max-image-preview:${r}`,i&&`max-snippet:${i}`,n&&`max-video-preview:${n}`,l&&`unavailable_after:${l}`],R=(c?"noindex":"index")+","+(s?"nofollow":"follow");for(let m of h)m&&(R+=`,${m}`);t.push(C("meta",{name:"robots",content:R}));break}}return t.flat().sort((a,r)=>a.key.localeCompare(r.key))}function C(e,t,a){let r={tag:e,props:{},key:""};return e==="title"?(r.children=t.title,r.key=z(r),r):e==="script"?(r.children=typeof t.children=="string"?t.children:"",r.key=z(r,a),delete t.children,r.props=t,r):(r.props=t,Object.keys(r.props).forEach(i=>!r.props[i]&&delete r.props[i]),r.key=z(r,a),r)}function z(e,t){let{tag:a,props:r}=e;if(a==="title")return "0-title";if(a==="meta"){let i=r.content===t&&typeof r.property=="string"&&!r.property.endsWith("secure_url")&&"0";return [a,...[t,i],r.property||r.name].filter(o=>o).join("-")}return a==="link"?[a,r.rel,r.hrefLang||r.media].filter(n=>n).join("-").replace(/\s+/g,"-"):a==="script"?`${a}-${t}`:`${a}-${r.type}`}function yt(e,t){if(!!t)return e?typeof e=="function"?e(t):e.replace("%s",t??""):t}function ft(e){switch(e&&e.split(".").pop()){case"svg":return "image/svg+xml";case"png":return "image/png";case"gif":return "image/gif";case"swf":return "application/x-shockwave-flash";case"mp3":return "audio/mpeg";case"jpg":case"jpeg":default:return "image/jpeg"}}function X(e){return Array.isArray(e)?e:[e]}function v(e,t){try{return e.validate(t)}catch(a){return console.warn(a.message),t}}var It=lazy(()=>import('./log-seo-tags-N7J66FN6.js'));function Rt({debug:e}){let t=useMatches(),a=useLocation(),r=useMemo(()=>t.flatMap(o=>{let{handle:s,...u}=o,c={...u,...a},p=s?.seo,d=u?.data?.seo;return !p&&!d?[]:p?N(s.seo,c):[d]}).reduce((o,s)=>{Object.keys(s).forEach(c=>!s[c]&&delete s[c]);let{jsonLd:u}=s;return u?o?.jsonLd?Array.isArray(u)?{...o,...s,jsonLd:[...o.jsonLd,...u]}:{...o,...s,jsonLd:[...o.jsonLd,u]}:{...o,...s,jsonLd:[u]}:{...o,...s}},{}),[t,a]),{html:i,loggerMarkup:n}=useMemo(()=>{let o=we(r),s=o.map(c=>c.tag==="script"?createElement(c.tag,{...c.props,key:c.key,dangerouslySetInnerHTML:{__html:c.children}}):createElement(c.tag,{...c.props,key:c.key},c.children)),u=createElement(Suspense,{fallback:null},createElement(It,{headTags:o}));return {html:s,loggerMarkup:u}},[r]);return createElement(Fragment,null,i,e&&n)}function N(e,...t){if(e instanceof Function)return N(e(...t),...t);let a={};return Array.isArray(e)?(a=e.reduce((r,i)=>[...r,N(i)],[]),a):e instanceof Object?(Object.entries(e).forEach(([i,n])=>{a[i]=N(n,...t);}),a):e}function At({connection:e,children:t=()=>(console.warn("<Pagination> requires children to work properly"),null)}){let r=useNavigation().state==="loading",{endCursor:i,hasNextPage:n,hasPreviousPage:o,nextPageUrl:s,nodes:u,previousPageUrl:c,startCursor:p}=Ot(e),d=useMemo(()=>({pageInfo:{endCursor:i,hasPreviousPage:o,startCursor:p},nodes:u}),[i,o,p,u]),l=useMemo(()=>function(m){return n?createElement(Link,{preventScrollReset:!0,...m,to:s,state:d,replace:!0}):null},[n,s]),h=useMemo(()=>function(m){return o?createElement(Link,{preventScrollReset:!0,...m,to:c,state:d,replace:!0}):null},[o,c]);return t({state:d,hasNextPage:n,hasPreviousPage:o,isLoading:r,nextPageUrl:s,nodes:u,previousPageUrl:c,NextLink:l,PreviousLink:h})}function Ot(e){let{state:t,search:a}=useLocation(),n=new URLSearchParams(a).get("direction")==="previous",o=useMemo(()=>!t||!t?.nodes?flattenConnection(e):n?[...flattenConnection(e),...t.nodes]:[...t.nodes,...flattenConnection(e)],[t,e]),s=useMemo(()=>{let p=t?.pageInfo?.startCursor===void 0?e.pageInfo.startCursor:t.pageInfo.startCursor,d=t?.pageInfo?.endCursor===void 0?e.pageInfo.endCursor:t.pageInfo.endCursor;t?.nodes&&(n?p=e.pageInfo.startCursor:d=e.pageInfo.endCursor);let l=t?.pageInfo?.hasPreviousPage===void 0?e.pageInfo.hasPreviousPage:t.pageInfo.hasPreviousPage,h=t?.pageInfo?.hasNextPage===void 0?e.pageInfo.hasNextPage:t.pageInfo.hasNextPage;return {startCursor:p,endCursor:d,hasPreviousPage:l,hasNextPage:h}},[n,t,e.pageInfo.hasNextPage,e.pageInfo.hasPreviousPage,e.pageInfo.startCursor,e.pageInfo.endCursor]),u=useMemo(()=>{let p=new URLSearchParams(a);return p.set("direction","previous"),s.startCursor&&p.set("cursor",s.startCursor),`?${p.toString()}`},[a,s.startCursor]),c=useMemo(()=>{let p=new URLSearchParams(a);return p.set("direction","next"),s.endCursor&&p.set("cursor",s.endCursor),`?${p.toString()}`},[a,s.endCursor]);return {...s,previousPageUrl:u,nextPageUrl:c,nodes:o}}function Pt(e,t={pageBy:20}){if(!(e instanceof Request))throw new Error("getPaginationVariables must be called with the Request object passed to your loader function");let{pageBy:a}=t,r=new URLSearchParams(new URL(e.url).search),i=r.get("cursor")??void 0;return (r.get("direction")==="previous"?"previous":"next")==="previous"?{last:a,startCursor:i??null}:{first:a,endCursor:i??null}}var Ne="cartFormInput";function F({children:e,action:t,inputs:a,route:r}){let i=useFetcher();return jsxs(i.Form,{action:r||"",method:"post",children:[(t||a)&&jsx("input",{type:"hidden",name:Ne,value:JSON.stringify({action:t,inputs:a})}),typeof e=="function"?e(i):e]})}F.INPUT_NAME=Ne;F.ACTIONS={AttributesUpdateInput:"AttributesUpdateInput",BuyerIdentityUpdate:"BuyerIdentityUpdate",Create:"Create",DiscountCodesUpdate:"DiscountCodesUpdate",LinesAdd:"LinesAdd",LinesRemove:"LinesRemove",LinesUpdate:"LinesUpdate",NoteUpdate:"NoteUpdate",SelectedDeliveryOptionsUpdate:"SelectedDeliveryOptionsUpdate",MetafieldsSet:"MetafieldsSet",MetafieldDelete:"MetafieldDelete"};function Dt(e){let t={};for(let o of e.entries()){let s=o[0],u=e.getAll(s);t[s]=u.length>1?u:o[1];}let{cartFormInput:a,...r}=t,{action:i,inputs:n}=a?JSON.parse(String(a)):{};return {action:i,inputs:{...n,...r}}}F.getFormInput=Dt;var f=`#graphql
+  fragment CartApiError on CartUserError {
+    message
+    field
+    code
+  }
+`,g=`#graphql
+  fragment CartApiMutation on Cart {
+    id
+    totalQuantity
+  }
+`;function ee(e){return async(t,a)=>{let{cartId:r,...i}=a||{},{cartCreate:n}=await e.storefront.mutate(wt(e.cartFragment),{variables:{input:t,...i}});return n}}var wt=(e=g)=>`#graphql
+  mutation cartCreate(
+    $input: CartInput!
+    $country: CountryCode = ZZ
+    $language: LanguageCode
+  ) @inContext(country: $country, language: $language) {
+    cartCreate(input: $input) {
+      cart {
+        ...CartApiMutation
+        checkoutUrl
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+  ${e}
+  ${f}
+`;function te(e){return async t=>{let a=e.getCartId();if(!a)return null;let{cart:r}=await e.storefront.query(Et(e.cartFragment),{variables:{cartId:a,...t},cache:e.storefront.CacheNone()});return r}}var Et=(e=Lt)=>`#graphql
+  query CartQuery(
+    $cartId: ID!
+    $numCartLines: Int = 100
+    $country: CountryCode = ZZ
+    $language: LanguageCode
+  ) @inContext(country: $country, language: $language) {
+    cart(id: $cartId) {
+      ...CartApiQuery
+    }
+  }
+
+  ${e}
+`,Lt=`#graphql
+  fragment CartApiQuery on Cart {
+    id
+    checkoutUrl
+    totalQuantity
+    buyerIdentity {
+      countryCode
+      customer {
+        id
+        email
+        firstName
+        lastName
+        displayName
+      }
+      email
+      phone
+    }
+    lines(first: $numCartLines) {
+      edges {
+        node {
+          id
+          quantity
+          attributes {
+            key
+            value
+          }
+          cost {
+            totalAmount {
+              amount
+              currencyCode
+            }
+            amountPerQuantity {
+              amount
+              currencyCode
+            }
+            compareAtAmountPerQuantity {
+              amount
+              currencyCode
+            }
+          }
+          merchandise {
+            ... on ProductVariant {
+              id
+              availableForSale
+              compareAtPrice {
+                ...CartApiMoney
+              }
+              price {
+                ...CartApiMoney
+              }
+              requiresShipping
+              title
+              image {
+                ...CartApiImage
+              }
+              product {
+                handle
+                title
+                id
+              }
+              selectedOptions {
+                name
+                value
+              }
+            }
+          }
+        }
+      }
+    }
+    cost {
+      subtotalAmount {
+        ...CartApiMoney
+      }
+      totalAmount {
+        ...CartApiMoney
+      }
+      totalDutyAmount {
+        ...CartApiMoney
+      }
+      totalTaxAmount {
+        ...CartApiMoney
+      }
+    }
+    note
+    attributes {
+      key
+      value
+    }
+    discountCodes {
+      applicable
+      code
+    }
+  }
+
+  fragment CartApiMoney on MoneyV2 {
+    currencyCode
+    amount
+  }
+
+  fragment CartApiImage on Image {
+    id
+    url
+    altText
+    width
+    height
+  }
+`;function re(e){return async(t,a)=>{let{cartLinesAdd:r}=await e.storefront.mutate(vt(e.cartFragment),{variables:{cartId:e.getCartId(),lines:t,...a}});return r}}var vt=(e=g)=>`#graphql
+  mutation cartLinesAdd(
+    $cartId: ID!
+    $lines: [CartLineInput!]!
+    $country: CountryCode = ZZ
+    $language: LanguageCode
+  ) @inContext(country: $country, language: $language) {
+    cartLinesAdd(cartId: $cartId, lines: $lines) {
+      cart {
+        ...CartApiMutation
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+
+  ${e}
+  ${f}
+`;function ae(e){return async(t,a)=>{let{cartLinesUpdate:r}=await e.storefront.mutate(Nt(e.cartFragment),{variables:{cartId:e.getCartId(),lines:t,...a}});return r}}var Nt=(e=g)=>`#graphql
+  mutation cartLinesUpdate(
+    $cartId: ID!
+    $lines: [CartLineUpdateInput!]!
+    $language: LanguageCode
+    $country: CountryCode
+  ) @inContext(country: $country, language: $language) {
+    cartLinesUpdate(cartId: $cartId, lines: $lines) {
+      cart {
+        ...CartApiMutation
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+
+  ${e}
+  ${f}
+`;function ne(e){return async(t,a)=>{let{cartLinesRemove:r}=await e.storefront.mutate(Ft(e.cartFragment),{variables:{cartId:e.getCartId(),lineIds:t,...a}});return r}}var Ft=(e=g)=>`#graphql
+  mutation cartLinesRemove(
+    $cartId: ID!
+    $lineIds: [ID!]!
+    $language: LanguageCode
+    $country: CountryCode
+  ) @inContext(country: $country, language: $language) {
+    cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
+      cart {
+        ...CartApiMutation
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+
+  ${e}
+  ${f}
+`;function oe(e){return async(t,a)=>{let r=t.filter((n,o,s)=>s.indexOf(n)===o),{cartDiscountCodesUpdate:i}=await e.storefront.mutate($t(e.cartFragment),{variables:{cartId:e.getCartId(),discountCodes:r,...a}});return i}}var $t=(e=g)=>`#graphql
+  mutation cartDiscountCodesUpdate(
+    $cartId: ID!
+    $discountCodes: [String!]
+    $language: LanguageCode
+    $country: CountryCode
+  ) @inContext(country: $country, language: $language) {
+    cartDiscountCodesUpdate(cartId: $cartId, discountCodes: $discountCodes) {
+      cart {
+        ...CartApiMutation
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+  ${e}
+  ${f}
+`;function ie(e){return async(t,a)=>{let{cartBuyerIdentityUpdate:r}=await e.storefront.mutate(qt(e.cartFragment),{variables:{cartId:e.getCartId(),buyerIdentity:t,...a}});return r}}var qt=(e=g)=>`#graphql
+  mutation cartBuyerIdentityUpdate(
+    $cartId: ID!
+    $buyerIdentity: CartBuyerIdentityInput!
+    $language: LanguageCode
+    $country: CountryCode
+  ) @inContext(country: $country, language: $language) {
+    cartBuyerIdentityUpdate(cartId: $cartId, buyerIdentity: $buyerIdentity) {
+      cart {
+        ...CartApiMutation
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+  ${e}
+  ${f}
+`;function se(e){return async(t,a)=>{let{cartNoteUpdate:r}=await e.storefront.mutate(kt(e.cartFragment),{variables:{cartId:e.getCartId(),note:t,...a}});return r}}var kt=(e=g)=>`#graphql
+  mutation cartNoteUpdate(
+    $cartId: ID!
+    $note: String
+    $language: LanguageCode
+    $country: CountryCode
+  ) @inContext(country: $country, language: $language) {
+    cartNoteUpdate(cartId: $cartId, note: $note) {
+      cart {
+        ...CartApiMutation
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+  ${e}
+  ${f}
+`;function ue(e){return async(t,a)=>{let{cartSelectedDeliveryOptionsUpdate:r}=await e.storefront.mutate(_t(e.cartFragment),{variables:{cartId:e.getCartId(),selectedDeliveryOptions:t,...a}});return r}}var _t=(e=g)=>`#graphql
+  mutation cartSelectedDeliveryOptionsUpdate(
+    $cartId: ID!
+    $selectedDeliveryOptions: [CartSelectedDeliveryOptionInput!]!
+    $language: LanguageCode
+    $country: CountryCode
+  ) @inContext(country: $country, language: $language) {
+    cartSelectedDeliveryOptionsUpdate(cartId: $cartId, selectedDeliveryOptions: $selectedDeliveryOptions) {
+      cart {
+        ...CartApiMutation
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+  ${e}
+  ${f}
+`;function pe(e){return async(t,a)=>{let{cartAttributesUpdate:r}=await e.storefront.mutate(Qt(e.cartFragment),{variables:{cartId:a?.cartId||e.getCartId(),attributes:t}});return r}}var Qt=(e=g)=>`#graphql
+  mutation cartAttributesUpdate(
+    $cartId: ID!
+    $attributes: [AttributeInput!]!
+  ) {
+    cartAttributesUpdate(cartId: $cartId, attributes: $attributes) {
+      cart {
+        ...CartApiMutation
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+  ${e}
+  ${f}
+`;function ce(e){return async(t,a)=>{let r=a?.cartId||e.getCartId(),i=t.map(o=>({...o,ownerId:r})),{cartMetafieldsSet:n}=await e.storefront.mutate(Ht(),{variables:{metafields:i}});return {cart:{id:r},errors:n.errors}}}var Ht=()=>`#graphql
+  mutation cartMetafieldsSet(
+    $metafields: [CartMetafieldsSetInput!]!
+    $language: LanguageCode
+    $country: CountryCode
+  ) @inContext(country: $country, language: $language) {
+    cartMetafieldsSet(metafields: $metafields) {
+      errors: userErrors {
+        code
+        elementIndex
+        field
+        message
+      }
+    }
+  }
+`;function de(e){return async(t,a)=>{let r=a?.cartId||e.getCartId(),{cartMetafieldDelete:i}=await e.storefront.mutate(Gt(),{variables:{input:{ownerId:r,key:t}}});return {cart:{id:r},errors:i.errors}}}var Gt=()=>`#graphql
+  mutation cartMetafieldDelete(
+    $input: CartMetafieldDeleteInput!
+  ) {
+    cartMetafieldDelete(input: $input) {
+      errors: userErrors {
+        code
+        field
+        message
+      }
+    }
+  }
+`;var Vt=new Set(["domain","path","max-age","expires","samesite","secure","httponly"]);function Fe(e){let t={},a,r,i=0,n=e.split(/;\s*/g),o,s;for(;i<n.length;i++)if(r=n[i],a=r.indexOf("="),~a){if(o=r.substring(0,a++).trim(),s=r.substring(a).trim(),s[0]==='"'&&(s=s.substring(1,s.length-1)),~s.indexOf("%"))try{s=decodeURIComponent(s);}catch{}Vt.has(r=o.toLowerCase())?r==="expires"?t.expires=new Date(s):r==="max-age"?t.maxage=+s:t[r]=s:t[o]=s;}else (o=r.trim().toLowerCase())&&(o==="httponly"||o==="secure")&&(t[o]=!0);return t}function $e(e,t,a={}){let r=e+"="+encodeURIComponent(t);return a.expires&&(r+="; Expires="+new Date(a.expires).toUTCString()),a.maxage!=null&&a.maxage>=0&&(r+="; Max-Age="+(a.maxage|0)),a.domain&&(r+="; Domain="+a.domain),a.path&&(r+="; Path="+a.path),a.samesite&&(r+="; SameSite="+a.samesite),(a.secure||a.samesite==="None")&&(r+="; Secure"),a.httponly&&(r+="; HttpOnly"),r}var Bt=e=>{let t=Fe(e.get("Cookie")||"");return ()=>t.cart?`gid://shopify/Cart/${t.cart}`:void 0};var Wt=e=>t=>{let a=new Headers;return a.append("Set-Cookie",$e("cart",t.split("/").pop()||"",{path:"/",...e})),a};function jt(e){let{getCartId:t,setCartId:a,storefront:r,cartQueryFragment:i,cartMutateFragment:n}=e,o={storefront:r,getCartId:t,cartFragment:n},s=t(),u=ee(o),c={get:te({storefront:r,getCartId:t,cartFragment:i}),getCartId:t,setCartId:a,create:u,addLines:async(p,d)=>s||d?.cartId?await re(o)(p,d):await u({lines:p},d),updateLines:ae(o),removeLines:ne(o),updateDiscountCodes:async(p,d)=>s||d?.cartId?await oe(o)(p,d):await u({discountCodes:p},d),updateBuyerIdentity:async(p,d)=>s||d?.cartId?await ie(o)(p,d):await u({buyerIdentity:p},d),updateNote:async(p,d)=>s||d?.cartId?await se(o)(p,d):await u({note:p},d),updateSelectedDeliveryOption:ue(o),updateAttributes:async(p,d)=>s||d?.cartId?await pe(o)(p,d):await u({attributes:p},d),setMetafields:async(p,d)=>s||d?.cartId?await ce(o)(p,d):await u({metafields:p},d),deleteMetafield:de(o)};return "customMethods__unstable"in e?{...c,...e.customMethods__unstable??{}}:c}function Xt({handle:e,options:t=[],variants:a=[],children:r}){let i=a instanceof Array?a:flattenConnection(a),{searchParams:n,path:o,alreadyOnProductPage:s}=er(e),u=t.filter(c=>c?.values?.length===1);return createElement(Fragment,null,...useMemo(()=>t.filter(c=>c?.values?.length>1).map(c=>{let p,d=[];for(let l of c.values){let h=new URLSearchParams(s?n:void 0);h.set(c.name,l),u.forEach(S=>{h.set(S.name,S.values[0]);});let R=i.find(S=>S?.selectedOptions?.every(A=>h.get(A?.name)===A?.value)),m=n.get(c.name),O=m?m===l:!1;O&&(p=l);let y="?"+h.toString();d.push({value:l,isAvailable:R?R.availableForSale:!0,to:o+y,search:y,isActive:O});}return r({option:{name:c.name,value:p,values:d}})}),[t,i,r]))}var Zt=e=>{if(!(e instanceof Request))throw new TypeError(`Expected a Request instance, got ${typeof e}`);let t=new URL(e.url).searchParams,a=[];return t.forEach((r,i)=>{a.push({name:i,value:r});}),a};function er(e){let{pathname:t,search:a}=useLocation();return useMemo(()=>{let r=/(\/[a-zA-Z]{2}-[a-zA-Z]{2}\/)/g.exec(t),n=r&&r.length>0?`${r[0]}products/${e}`:`/products/${e}`;return {searchParams:new URLSearchParams(a),alreadyOnProductPage:n===t,path:n}},[t,a,e])}//! @see https://shopify.dev/docs/api/storefront/2023-07/mutations/cartMetafieldDelete
+//! @see https://shopify.dev/docs/api/storefront/latest/mutations/cartBuyerIdentityUpdate
+//! @see https://shopify.dev/docs/api/storefront/latest/mutations/cartDiscountCodesUpdate
+//! @see https://shopify.dev/docs/api/storefront/latest/mutations/cartMetafieldsSet
+//! @see https://shopify.dev/docs/api/storefront/latest/mutations/cartNoteUpdate
+//! @see https://shopify.dev/docs/api/storefront/latest/mutations/cartSelectedDeliveryOptionsUpdate
+//! @see https://shopify.dev/docs/api/storefront/latest/queries/cart
+//! @see: https://shopify.dev/docs/api/storefront/latest/mutations/cartCreate
+//! @see: https://shopify.dev/docs/api/storefront/latest/mutations/cartLinesAdd
+//! @see: https://shopify.dev/docs/api/storefront/latest/mutations/cartLinesRemove
+//! @see: https://shopify.dev/docs/api/storefront/latest/mutations/cartLinesUpdate
+
+export { G as CacheCustom, H as CacheLong, Q as CacheNone, I as CacheShort, F as CartForm, Y as InMemoryCache, At as Pagination, Rt as Seo, Xt as VariantSelector, pe as cartAttributesUpdateDefault, ie as cartBuyerIdentityUpdateDefault, ee as cartCreateDefault, oe as cartDiscountCodesUpdateDefault, te as cartGetDefault, Bt as cartGetIdDefault, re as cartLinesAddDefault, ne as cartLinesRemoveDefault, ae as cartLinesUpdateDefault, de as cartMetafieldDeleteDefault, ce as cartMetafieldsSetDefault, se as cartNoteUpdateDefault, ue as cartSelectedDeliveryOptionsUpdateDefault, Wt as cartSetIdDefault, jt as createCartHandler, Pr as createStorefrontClient, Ur as createWithCache, b as generateCacheControlHeader, Pt as getPaginationVariables, Zt as getSelectedProductOptions, lt as graphiqlLoader, ot as isStorefrontApiError, pt as storefrontRedirect };
+//# sourceMappingURL=out.js.map
+//# sourceMappingURL=index.js.map

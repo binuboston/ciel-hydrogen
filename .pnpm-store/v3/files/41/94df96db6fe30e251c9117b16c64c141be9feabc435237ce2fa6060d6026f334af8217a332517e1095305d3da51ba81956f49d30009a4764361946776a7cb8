@@ -1,0 +1,22 @@
+# Oxygen Workers Types
+
+This package provides TypeScript definitions for the Oxygen runtime by Shopify.
+
+It is a derivative of [`@cloudflare/workers-types`](https://github.com/cloudflare/workers-types).
+
+## Usage
+
+The following is a minimal `tsconfig.json` for use alongside this package:
+
+**`tsconfig.json`**
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "lib": ["ES2020"],
+    "types": ["@shopify/oxygen-workers-types"]
+  }
+}
+```

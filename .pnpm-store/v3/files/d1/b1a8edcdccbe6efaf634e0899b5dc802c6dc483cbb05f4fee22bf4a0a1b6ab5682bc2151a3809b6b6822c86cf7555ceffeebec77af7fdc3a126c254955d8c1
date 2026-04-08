@@ -1,0 +1,36 @@
+{
+  "name": "@shopify/oxygen-workers-types",
+  "version": "3.17.3",
+  "description": "TypeScript typings for Shopify Oxygen",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Shopify/oxygen-workers-types"
+  },
+  "publishConfig": {
+    "access": "public",
+    "@shopify:registry": "https://registry.npmjs.org/"
+  },
+  "type": "module",
+  "types": "./index.d.ts",
+  "files": [
+    "index.d.ts"
+  ],
+  "scripts": {
+    "prettier:check": "prettier --check '**/*.{md,ts}'",
+    "prettier": "prettier --write '**/*.{md,ts}'",
+    "test": "tsc",
+    "parse": "yarn & npx ts-node --esm parse.ts && yarn prettier && yarn test"
+  },
+  "author": "Cloudflare Workers Team <workers@cloudflare.com> (https://workers.cloudflare.com)",
+  "contributors": [
+    "Shopify Oxygen Platform team <oxygen-platform@shopify.com>"
+  ],
+  "license": "BSD-3-Clause",
+  "devDependencies": {
+    "@cloudflare/workers-types": "3.17.0",
+    "@types/marked": "^4.0.1",
+    "@types/node": "^20.3.3",
+    "prettier": "^3.0.0",
+    "typescript": "^4.3.5"
+  }
+}

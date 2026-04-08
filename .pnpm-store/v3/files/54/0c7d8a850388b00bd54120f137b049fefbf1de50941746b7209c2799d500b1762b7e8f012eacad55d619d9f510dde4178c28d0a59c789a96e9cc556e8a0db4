@@ -1,0 +1,70 @@
+import { renderWarning, renderSuccess } from '@shopify/cli-kit/node/ui';
+
+const REQUIRED_ROUTES = [
+  "",
+  "cart",
+  "products/:productHandle",
+  "collections",
+  "collections/:collectionHandle",
+  "sitemap.xml",
+  "robots.txt",
+  "pages/:pageHandle",
+  "policies/:policyHandle",
+  "search",
+  "account",
+  "account/login",
+  "account/register",
+  "account/orders/:orderId",
+  "account/reset/:id/:token",
+  "account/activate/:id/:token"
+];
+function findMissingRoutes(config, requiredRoutes = REQUIRED_ROUTES) {
+  const userRoutes = Object.values(config.routes);
+  const missingRoutes = new Set(requiredRoutes);
+  for (const requiredRoute of requiredRoutes) {
+    for (const userRoute of userRoutes) {
+      if (!requiredRoute && !userRoute.path) {
+        missingRoutes.delete(requiredRoute);
+      } else if (requiredRoute && userRoute.path) {
+        const currentRoute = {
+          path: userRoute.path,
+          parentId: userRoute.parentId
+        };
+        while (currentRoute.parentId && currentRoute.parentId !== "root") {
+          const parentRoute = userRoutes.find(
+            (r) => r.id === currentRoute.parentId
+          );
+          if (!parentRoute)
+            break;
+          currentRoute.path = `${parentRoute.path}/${currentRoute.path}`;
+          currentRoute.parentId = parentRoute.parentId;
+        }
+        const optionalSegment = ":?[^\\/\\?]+\\?";
+        const reString = `^(${optionalSegment}\\/)?` + requiredRoute.replaceAll(".", "\\.").replace(/\//g, `\\/(${optionalSegment}\\/)?`).replace(/:[^/)?]+/g, ":[^\\/]+") + `(\\/${optionalSegment})?$`;
+        if (new RegExp(reString).test(currentRoute.path)) {
+          missingRoutes.delete(requiredRoute);
+        }
+      }
+    }
+  }
+  return [...missingRoutes];
+}
+const LINE_LIMIT = 100;
+function logMissingRoutes(routes) {
+  if (routes.length) {
+    renderWarning({
+      headline: "Standard Shopify routes missing",
+      body: `Your Hydrogen project is missing ${routes.length} standard Shopify route${routes.length > 1 ? "s" : ""}.
+Including these routes improves compatibility with Shopify\u2019s platform:
+
+` + routes.slice(0, LINE_LIMIT - (routes.length <= LINE_LIMIT ? 0 : 1)).map((route) => `\u2022 /${route}`).join("\n") + (routes.length > LINE_LIMIT ? `
+\u2022 ...and ${routes.length - LINE_LIMIT + 1} more` : "")
+    });
+  } else {
+    renderSuccess({
+      headline: "All standard Shopify routes present"
+    });
+  }
+}
+
+export { findMissingRoutes, logMissingRoutes };

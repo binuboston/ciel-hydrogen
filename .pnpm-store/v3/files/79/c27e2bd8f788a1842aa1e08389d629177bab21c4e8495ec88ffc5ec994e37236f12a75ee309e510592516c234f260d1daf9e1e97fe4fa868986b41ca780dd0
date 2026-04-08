@@ -1,0 +1,2305 @@
+'use strict';
+
+var hydrogenReact = require('@shopify/hydrogen-react');
+var serverRuntime = require('@remix-run/server-runtime');
+var react = require('react');
+var react$1 = require('@remix-run/react');
+var jsxRuntime = require('react/jsx-runtime');
+
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+
+// src/seo/log-seo-tags.ts
+var log_seo_tags_exports = {};
+__export(log_seo_tags_exports, {
+  default: () => Logger,
+  logSeoTags: () => logSeoTags
+});
+function Logger({ headTags }) {
+  logSeoTags(headTags);
+  return null;
+}
+function logSeoTags(headTags) {
+  console.log(" ");
+  console.log("%cSEO Meta Tags", `${titleStyle}`);
+  console.log(" ");
+  headTags.forEach((tag) => {
+    if (tag.tag === "script") {
+      console.log(`%c\u2022 JSON LD `, headingStyle);
+      if (tag.children) {
+        try {
+          console.table(JSON.parse(tag.children), ["name", "content"]);
+        } catch {
+          console.log(tag.children);
+        }
+      }
+    } else {
+      console.log(`%c\u2022 ${tag.tag} `, headingStyle);
+      if (tag.children) {
+        if (typeof tag.children === "string") {
+          console.log(`\u21B3 ${tag.children}`);
+        } else {
+          try {
+            Object.entries(JSON.parse(tag.children)).map(
+              ([key, val]) => console.log(`\u21B3 ${val}`)
+            );
+          } catch {
+            console.log(tag.children);
+          }
+        }
+      }
+      if (tag.props.property === "og:image:url") {
+        const urlKey = tag.props.content;
+        fetchImage(urlKey).then((image) => {
+          const imageStyle = `font-size: 400px; padding: 10px; background: white url(${image}) no-repeat center; background-size: contain;`;
+          console.log(`%c\u2022 Share image preview`, headingStyle);
+          console.log("%c  ", imageStyle);
+          console.log(`\u21B3 ${urlKey}`);
+        }).catch((err) => {
+          console.error(err);
+        });
+      }
+      Object.entries(tag.props).map(([key, val]) => {
+        console.log(`\u21B3 ${key} \u2192 ${val}`);
+      });
+    }
+    console.log(" ");
+  });
+}
+async function fetchImage(url) {
+  const result = await fetch(url);
+  const data = await result.blob();
+  const buff = await data.arrayBuffer();
+  const base64String = arrayBufferToBase64(buff);
+  return `data:image/png;base64,${base64String}`;
+}
+function arrayBufferToBase64(buffer) {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let index = 0; index < len; index++) {
+    binary += String.fromCharCode(bytes[index]);
+  }
+  return btoa(binary);
+}
+var headingStyle, titleStyle;
+var init_log_seo_tags = __esm({
+  "src/seo/log-seo-tags.ts"() {
+    headingStyle = "text-transform: uppercase;";
+    titleStyle = "text-transform: uppercase; font-weight: bold; text-transform: uppercase;font-weight: bold";
+  }
+});
+
+// src/utils/hash.ts
+function hashKey(queryKey) {
+  const rawKeys = Array.isArray(queryKey) ? queryKey : [queryKey];
+  let hash = "";
+  for (const key of rawKeys) {
+    if (key != null) {
+      if (typeof key === "object") {
+        if (!!key.body && typeof key.body === "string") {
+          hash += key.body;
+        } else {
+          hash += JSON.stringify(key);
+        }
+      } else {
+        hash += key;
+      }
+    }
+  }
+  return encodeURIComponent(hash);
+}
+
+// src/cache/strategies.ts
+var PUBLIC = "public";
+var PRIVATE = "private";
+var NO_STORE = "no-store";
+var optionMapping = {
+  maxAge: "max-age",
+  staleWhileRevalidate: "stale-while-revalidate",
+  sMaxAge: "s-maxage",
+  staleIfError: "stale-if-error"
+};
+function generateCacheControlHeader(cacheOptions) {
+  const cacheControl = [];
+  Object.keys(cacheOptions).forEach((key) => {
+    if (key === "mode") {
+      cacheControl.push(cacheOptions[key]);
+    } else if (optionMapping[key]) {
+      cacheControl.push(
+        `${optionMapping[key]}=${cacheOptions[key]}`
+      );
+    }
+  });
+  return cacheControl.join(", ");
+}
+function CacheNone() {
+  return {
+    mode: NO_STORE
+  };
+}
+function guardExpirableModeType(overrideOptions) {
+  if (overrideOptions?.mode && overrideOptions?.mode !== PUBLIC && overrideOptions?.mode !== PRIVATE) {
+    throw Error("'mode' must be either 'public' or 'private'");
+  }
+}
+function CacheShort(overrideOptions) {
+  guardExpirableModeType(overrideOptions);
+  return {
+    mode: PUBLIC,
+    maxAge: 1,
+    staleWhileRevalidate: 9,
+    ...overrideOptions
+  };
+}
+function CacheLong(overrideOptions) {
+  guardExpirableModeType(overrideOptions);
+  return {
+    mode: PUBLIC,
+    maxAge: 3600,
+    staleWhileRevalidate: 82800,
+    ...overrideOptions
+  };
+}
+function CacheCustom(overrideOptions) {
+  return overrideOptions;
+}
+
+// src/utils/parse-json.ts
+function parseJSON(json) {
+  if (String(json).includes("__proto__"))
+    return JSON.parse(json, noproto);
+  return JSON.parse(json);
+}
+function noproto(k, v) {
+  if (k !== "__proto__")
+    return v;
+}
+function getCacheControlSetting(userCacheOptions, options) {
+  if (userCacheOptions && options) {
+    return {
+      ...userCacheOptions,
+      ...options
+    };
+  } else {
+    return userCacheOptions || CacheShort();
+  }
+}
+function generateDefaultCacheControlHeader(userCacheOptions) {
+  return generateCacheControlHeader(getCacheControlSetting(userCacheOptions));
+}
+async function getItem(cache, request) {
+  if (!cache)
+    return;
+  const response = await cache.match(request);
+  if (!response) {
+    return;
+  }
+  return response;
+}
+async function setItem(cache, request, response, userCacheOptions) {
+  if (!cache)
+    return;
+  const cacheControl = getCacheControlSetting(userCacheOptions);
+  const paddedCacheControlString = generateDefaultCacheControlHeader(
+    getCacheControlSetting(cacheControl, {
+      maxAge: (cacheControl.maxAge || 0) + (cacheControl.staleWhileRevalidate || 0)
+    })
+  );
+  const cacheControlString = generateDefaultCacheControlHeader(
+    getCacheControlSetting(cacheControl)
+  );
+  response.headers.set("cache-control", paddedCacheControlString);
+  response.headers.set("real-cache-control", cacheControlString);
+  response.headers.set("cache-put-date", new Date().toUTCString());
+  await cache.put(request, response);
+}
+async function deleteItem(cache, request) {
+  if (!cache)
+    return;
+  await cache.delete(request);
+}
+function calculateAge(response, responseDate) {
+  const cacheControl = response.headers.get("real-cache-control");
+  let responseMaxAge = 0;
+  if (cacheControl) {
+    const maxAgeMatch = cacheControl.match(/max-age=(\d*)/);
+    if (maxAgeMatch && maxAgeMatch.length > 1) {
+      responseMaxAge = parseFloat(maxAgeMatch[1]);
+    }
+  }
+  const ageInMs = new Date().valueOf() - new Date(responseDate).valueOf();
+  return [ageInMs / 1e3, responseMaxAge];
+}
+function isStale(request, response) {
+  const responseDate = response.headers.get("cache-put-date");
+  if (!responseDate) {
+    return false;
+  }
+  const [age, responseMaxAge] = calculateAge(response, responseDate);
+  const result = age > responseMaxAge;
+  return result;
+}
+var CacheAPI = {
+  get: getItem,
+  set: setItem,
+  delete: deleteItem,
+  generateDefaultCacheControlHeader,
+  isStale
+};
+
+// src/cache/sub-request.ts
+function getKeyUrl(key) {
+  return `https://shopify.dev/?${key}`;
+}
+function getCacheOption(userCacheOptions) {
+  return userCacheOptions || CacheShort();
+}
+async function getItemFromCache(cache, key) {
+  if (!cache)
+    return;
+  const url = getKeyUrl(key);
+  const request = new Request(url);
+  const response = await CacheAPI.get(cache, request);
+  if (!response) {
+    return;
+  }
+  const text = await response.text();
+  try {
+    return [parseJSON(text), response];
+  } catch {
+    return [text, response];
+  }
+}
+async function setItemInCache(cache, key, value, userCacheOptions) {
+  if (!cache)
+    return;
+  const url = getKeyUrl(key);
+  const request = new Request(url);
+  const response = new Response(JSON.stringify(value));
+  await CacheAPI.set(
+    cache,
+    request,
+    response,
+    getCacheOption(userCacheOptions)
+  );
+}
+function isStale2(key, response) {
+  return CacheAPI.isStale(new Request(getKeyUrl(key)), response);
+}
+
+// src/cache/fetch.ts
+function toSerializableResponse(body, response) {
+  return [
+    body,
+    {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Array.from(response.headers.entries())
+    }
+  ];
+}
+function fromSerializableResponse([body, init]) {
+  return [body, new Response(body, init)];
+}
+var checkGraphQLErrors = (body) => !body?.errors;
+var swrLock = /* @__PURE__ */ new Set();
+async function runWithCache(cacheKey, actionFn, {
+  strategy = CacheShort(),
+  cacheInstance,
+  shouldCacheResult = () => true,
+  waitUntil
+}) {
+  if (!cacheInstance || !strategy || strategy.mode === NO_STORE) {
+    return actionFn();
+  }
+  const key = hashKey([
+    ...typeof cacheKey === "string" ? [cacheKey] : cacheKey
+  ]);
+  const cachedItem = await getItemFromCache(cacheInstance, key);
+  if (cachedItem) {
+    const [cachedResult, cacheInfo] = cachedItem;
+    if (!swrLock.has(key) && isStale2(key, cacheInfo)) {
+      swrLock.add(key);
+      const revalidatingPromise = Promise.resolve().then(async () => {
+        try {
+          const result2 = await actionFn();
+          if (shouldCacheResult(result2)) {
+            await setItemInCache(cacheInstance, key, result2, strategy);
+          }
+        } catch (error) {
+          if (error.message) {
+            error.message = "SWR in sub-request failed: " + error.message;
+          }
+          console.error(error);
+        } finally {
+          swrLock.delete(key);
+        }
+      });
+      waitUntil?.(revalidatingPromise);
+    }
+    return cachedResult;
+  }
+  const result = await actionFn();
+  if (shouldCacheResult(result)) {
+    const setItemInCachePromise = setItemInCache(
+      cacheInstance,
+      key,
+      result,
+      strategy
+    );
+    waitUntil?.(setItemInCachePromise);
+  }
+  return result;
+}
+async function fetchWithServerCache(url, requestInit, {
+  cacheInstance,
+  cache: cacheOptions,
+  cacheKey = [url, requestInit],
+  shouldCacheResponse = () => true,
+  waitUntil,
+  returnType = "json"
+} = {}) {
+  if (!cacheOptions && (!requestInit.method || requestInit.method === "GET")) {
+    cacheOptions = CacheShort();
+  }
+  return runWithCache(
+    cacheKey,
+    async () => {
+      const response = await fetch(url, requestInit);
+      let data;
+      try {
+        data = await response[returnType]();
+      } catch {
+        try {
+          data = await response.text();
+        } catch {
+          throw new Error(
+            `Storefront API response code: ${response.status} (Request Id: ${response.headers.get("x-request-id")})`
+          );
+        }
+      }
+      return toSerializableResponse(data, response);
+    },
+    {
+      cacheInstance,
+      waitUntil,
+      strategy: cacheOptions ?? null,
+      shouldCacheResult: (result) => shouldCacheResponse(...fromSerializableResponse(result))
+    }
+  ).then(fromSerializableResponse);
+}
+
+// src/constants.ts
+var STOREFRONT_REQUEST_GROUP_ID_HEADER = "Custom-Storefront-Request-Group-ID";
+
+// src/utils/uuid.ts
+function generateUUID() {
+  if (typeof crypto !== "undefined" && !!crypto.randomUUID) {
+    return crypto.randomUUID();
+  } else {
+    return `weak-${Math.random().toString(16).substring(2)}`;
+  }
+}
+
+// src/utils/warning.ts
+var warnings = /* @__PURE__ */ new Set();
+var warnOnce = (string) => {
+  if (!warnings.has(string)) {
+    console.warn(string);
+    warnings.add(string);
+  }
+};
+
+// src/version.ts
+var LIB_VERSION = "2023.7.2";
+
+// src/storefront.ts
+var StorefrontApiError = class extends Error {
+};
+var isStorefrontApiError = (error) => error instanceof StorefrontApiError;
+var isQueryRE = /(^|}\s)query[\s({]/im;
+var isMutationRE = /(^|}\s)mutation[\s({]/im;
+function minifyQuery(string) {
+  return string.replace(/\s*#.*$/gm, "").replace(/\s+/gm, " ").trim();
+}
+var defaultI18n = { language: "EN", country: "US" };
+function createStorefrontClient(options) {
+  const {
+    storefrontHeaders,
+    cache,
+    waitUntil,
+    buyerIp,
+    i18n,
+    requestGroupId,
+    storefrontId,
+    ...clientOptions
+  } = options;
+  const H2_PREFIX_WARN = "[h2:warn:createStorefrontClient] ";
+  if (!cache) {
+    warnOnce(
+      H2_PREFIX_WARN + "Storefront API client created without a cache instance. This may slow down your sub-requests."
+    );
+  }
+  const {
+    getPublicTokenHeaders,
+    getPrivateTokenHeaders,
+    getStorefrontApiUrl,
+    getShopifyDomain
+  } = hydrogenReact.createStorefrontClient(clientOptions);
+  const getHeaders = clientOptions.privateStorefrontToken ? getPrivateTokenHeaders : getPublicTokenHeaders;
+  const defaultHeaders = getHeaders({
+    contentType: "json",
+    buyerIp: storefrontHeaders?.buyerIp || buyerIp
+  });
+  defaultHeaders[STOREFRONT_REQUEST_GROUP_ID_HEADER] = storefrontHeaders?.requestGroupId || requestGroupId || generateUUID();
+  if (storefrontId)
+    defaultHeaders[hydrogenReact.SHOPIFY_STOREFRONT_ID_HEADER] = storefrontId;
+  defaultHeaders["user-agent"] = `Hydrogen ${LIB_VERSION}`;
+  if (storefrontHeaders && storefrontHeaders.cookie) {
+    const cookies = hydrogenReact.getShopifyCookies(storefrontHeaders.cookie ?? "");
+    if (cookies[hydrogenReact.SHOPIFY_Y])
+      defaultHeaders[hydrogenReact.SHOPIFY_STOREFRONT_Y_HEADER] = cookies[hydrogenReact.SHOPIFY_Y];
+    if (cookies[hydrogenReact.SHOPIFY_S])
+      defaultHeaders[hydrogenReact.SHOPIFY_STOREFRONT_S_HEADER] = cookies[hydrogenReact.SHOPIFY_S];
+  }
+  if (!storefrontHeaders) {
+    warnOnce(
+      H2_PREFIX_WARN + "`requestGroupId` and `buyerIp` will be deprecated in the next calendar release. Please use `getStorefrontHeaders`"
+    );
+  }
+  async function fetchStorefrontApi({
+    query,
+    mutation,
+    variables,
+    cache: cacheOptions,
+    headers = [],
+    storefrontApiVersion
+  }) {
+    const userHeaders = headers instanceof Headers ? Object.fromEntries(headers.entries()) : Array.isArray(headers) ? Object.fromEntries(headers) : headers;
+    query = query ?? mutation;
+    const queryVariables = { ...variables };
+    if (i18n) {
+      if (!variables?.country && /\$country/.test(query)) {
+        queryVariables.country = i18n.country;
+      }
+      if (!variables?.language && /\$language/.test(query)) {
+        queryVariables.language = i18n.language;
+      }
+    }
+    const url = getStorefrontApiUrl({ storefrontApiVersion });
+    const requestInit = {
+      method: "POST",
+      headers: { ...defaultHeaders, ...userHeaders },
+      body: JSON.stringify({
+        query,
+        variables: queryVariables
+      })
+    };
+    const [body, response] = await fetchWithServerCache(url, requestInit, {
+      cacheInstance: mutation ? void 0 : cache,
+      cache: cacheOptions || CacheShort(),
+      shouldCacheResponse: checkGraphQLErrors,
+      waitUntil
+    });
+    const errorOptions = {
+      response,
+      type: mutation ? "mutation" : "query",
+      query,
+      queryVariables,
+      errors: void 0
+    };
+    if (!response.ok) {
+      let errors2;
+      try {
+        errors2 = parseJSON(body);
+      } catch (_e) {
+        errors2 = [{ message: body }];
+      }
+      throwError({ ...errorOptions, errors: errors2 });
+    }
+    const { data, errors } = body;
+    if (errors?.length) {
+      throwError({
+        ...errorOptions,
+        errors,
+        ErrorConstructor: StorefrontApiError
+      });
+    }
+    return data;
+  }
+  return {
+    storefront: {
+      query: (query, payload) => {
+        query = minifyQuery(query);
+        if (isMutationRE.test(query)) {
+          throw new Error(
+            "[h2:error:storefront.query] Cannot execute mutations"
+          );
+        }
+        return fetchStorefrontApi({ ...payload, query });
+      },
+      mutate: (mutation, payload) => {
+        mutation = minifyQuery(mutation);
+        if (isQueryRE.test(mutation)) {
+          throw new Error(
+            "[h2:error:storefront.mutate] Cannot execute queries"
+          );
+        }
+        return fetchStorefrontApi({ ...payload, mutation });
+      },
+      cache,
+      CacheNone,
+      CacheLong,
+      CacheShort,
+      CacheCustom,
+      generateCacheControlHeader,
+      getPublicTokenHeaders,
+      getPrivateTokenHeaders,
+      getShopifyDomain,
+      getApiUrl: getStorefrontApiUrl,
+      isApiError: isStorefrontApiError,
+      i18n: i18n ?? defaultI18n
+    }
+  };
+}
+function throwError({
+  response,
+  errors,
+  type,
+  query,
+  queryVariables,
+  ErrorConstructor = Error
+}) {
+  const requestId = response.headers.get("x-request-id");
+  const errorMessage = (typeof errors === "string" ? errors : errors?.map?.((error) => error.message).join("\n")) || `API response error: ${response.status}`;
+  throw new ErrorConstructor(
+    `[h2:error:storefront.${type}] ` + errorMessage + (requestId ? ` - Request ID: ${requestId}` : ""),
+    {
+      cause: {
+        errors,
+        requestId,
+        ...{
+          graphql: {
+            query,
+            variables: JSON.stringify(queryVariables)
+          }
+        }
+      }
+    }
+  );
+}
+
+// src/with-cache.ts
+function createWithCache(options) {
+  const { cache, waitUntil } = options;
+  return function withCache(cacheKey, strategy, actionFn) {
+    return runWithCache(cacheKey, actionFn, {
+      strategy,
+      cacheInstance: cache,
+      waitUntil
+    });
+  };
+}
+
+// src/cache/in-memory.ts
+var InMemoryCache = class {
+  #store;
+  constructor() {
+    this.#store = /* @__PURE__ */ new Map();
+  }
+  add(request) {
+    throw new Error("Method not implemented. Use `put` instead.");
+  }
+  addAll(requests) {
+    throw new Error("Method not implemented. Use `put` instead.");
+  }
+  matchAll(request, options) {
+    throw new Error("Method not implemented. Use `match` instead.");
+  }
+  async put(request, response) {
+    if (request.method !== "GET") {
+      throw new TypeError("Cannot cache response to non-GET request.");
+    }
+    if (response.status === 206) {
+      throw new TypeError(
+        "Cannot cache response to a range request (206 Partial Content)."
+      );
+    }
+    if (response.headers.get("vary")?.includes("*")) {
+      throw new TypeError("Cannot cache response with 'Vary: *' header.");
+    }
+    this.#store.set(request.url, {
+      body: new Uint8Array(await response.arrayBuffer()),
+      status: response.status,
+      headers: [...response.headers],
+      timestamp: Date.now()
+    });
+  }
+  async match(request) {
+    if (request.method !== "GET")
+      return;
+    const match = this.#store.get(request.url);
+    if (!match) {
+      return;
+    }
+    const { body, timestamp, ...metadata } = match;
+    const headers = new Headers(metadata.headers);
+    const cacheControl = headers.get("cache-control") || headers.get("real-cache-control") || "";
+    const maxAge = parseInt(
+      cacheControl.match(/max-age=(\d+)/)?.[1] || "0",
+      10
+    );
+    const swr = parseInt(
+      cacheControl.match(/stale-while-revalidate=(\d+)/)?.[1] || "0",
+      10
+    );
+    const age = (Date.now() - timestamp) / 1e3;
+    const isMiss = age > maxAge + swr;
+    if (isMiss) {
+      this.#store.delete(request.url);
+      return;
+    }
+    const isStale3 = age > maxAge;
+    headers.set("cache", isStale3 ? "STALE" : "HIT");
+    headers.set("date", new Date(timestamp).toUTCString());
+    return new Response(body, {
+      status: metadata.status ?? 200,
+      headers
+    });
+  }
+  async delete(request) {
+    if (this.#store.has(request.url)) {
+      this.#store.delete(request.url);
+      return true;
+    }
+    return false;
+  }
+  keys(request) {
+    const cacheKeys = [];
+    for (const url of this.#store.keys()) {
+      if (!request || request.url === url) {
+        cacheKeys.push(new Request(url));
+      }
+    }
+    return Promise.resolve(cacheKeys);
+  }
+};
+async function storefrontRedirect(options) {
+  const {
+    storefront,
+    request,
+    noAdminRedirect,
+    response = new Response("Not Found", { status: 404 })
+  } = options;
+  const { pathname, search } = new URL(request.url);
+  const redirectFrom = pathname + search;
+  if (pathname === "/admin" && !noAdminRedirect) {
+    return serverRuntime.redirect(`${storefront.getShopifyDomain()}/admin`);
+  }
+  try {
+    const { urlRedirects } = await storefront.query(REDIRECT_QUERY, {
+      variables: { query: "path:" + redirectFrom }
+    });
+    const location = urlRedirects?.edges?.[0]?.node?.target;
+    if (location) {
+      return new Response(null, { status: 301, headers: { location } });
+    }
+    const searchParams = new URLSearchParams(search);
+    const redirectTo = searchParams.get("return_to") || searchParams.get("redirect");
+    if (redirectTo) {
+      if (isLocalPath(redirectTo)) {
+        return serverRuntime.redirect(redirectTo);
+      } else {
+        console.warn(
+          `Cross-domain redirects are not supported. Tried to redirect from ${redirectFrom} to ${redirectTo}`
+        );
+      }
+    }
+  } catch (error) {
+    console.error(
+      `Failed to fetch redirects from Storefront API for route ${redirectFrom}`,
+      error
+    );
+  }
+  return response;
+}
+function isLocalPath(url) {
+  try {
+    new URL(url);
+  } catch (e) {
+    return true;
+  }
+  return false;
+}
+var REDIRECT_QUERY = `#graphql
+  query redirects($query: String) {
+    urlRedirects(first: 1, query: $query) {
+      edges {
+        node {
+          target
+        }
+      }
+    }
+  }
+`;
+
+// src/routing/graphiql.ts
+var graphiqlLoader = async function graphiqlLoader2({
+  context
+}) {
+  const storefront = context?.storefront;
+  if (!storefront) {
+    throw new Error(
+      `GraphiQL: Hydrogen's storefront client must be injected in the loader context.`
+    );
+  }
+  const url = storefront.getApiUrl();
+  const accessToken = storefront.getPublicTokenHeaders()["X-Shopify-Storefront-Access-Token"];
+  const favicon = `https://avatars.githubusercontent.com/u/12972006?s=48&v=4`;
+  return new Response(
+    `
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>GraphiQL</title>
+    <link rel="icon" type="image/x-icon" href="${favicon}">
+    <style>
+      body {
+        height: 100%;
+        margin: 0;
+        width: 100%;
+        overflow: hidden;
+      }
+
+      #graphiql {
+        height: 100vh;
+      }
+    </style>
+
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.development.js"
+    ><\/script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
+    ><\/script>
+    <link rel="stylesheet" href="https://unpkg.com/graphiql@3/graphiql.min.css" />
+  </head>
+
+  <body>
+    <div id="graphiql">Loading...</div>
+    <script
+      src="https://unpkg.com/graphiql@3/graphiql.min.js"
+      type="application/javascript"
+    ><\/script>
+    <script>
+      const windowUrl = new URL(document.URL);
+
+      let query = '{\\n  shop {\\n    name\\n  }\\n}';
+      if (windowUrl.searchParams.has('query')) {
+        query = decodeURIComponent(windowUrl.searchParams.get('query') ?? '');
+        // Prettify query
+        if (query) query = GraphiQL.GraphQL.print(GraphiQL.GraphQL.parse(query));
+      }
+
+      let variables;
+      if (windowUrl.searchParams.has('variables')) {
+        variables = decodeURIComponent(windowUrl.searchParams.get('variables') ?? '');
+        // Prettify variables
+        if (variables) variables = JSON.stringify(JSON.parse(variables), null, 2);
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById('graphiql'));
+      root.render(
+        React.createElement(GraphiQL, {
+          fetcher: GraphiQL.createFetcher({
+            url: '${url}',
+            headers: {'X-Shopify-Storefront-Access-Token': '${accessToken}'}
+          }),
+          defaultEditorToolsVisibility: true,
+          query,
+          variables
+        }),
+      );
+    <\/script>
+  </body>
+</html>
+  `,
+    { status: 200, headers: { "content-type": "text/html" } }
+  );
+};
+
+// src/seo/generate-seo-tags.ts
+var ERROR_PREFIX = "Error in SEO input: ";
+var schema = {
+  title: {
+    validate: (value) => {
+      if (typeof value !== "string") {
+        throw new Error(ERROR_PREFIX.concat("`title` should be a string"));
+      }
+      if (typeof value === "string" && value.length > 120) {
+        throw new Error(
+          ERROR_PREFIX.concat(
+            "`title` should not be longer than 120 characters"
+          )
+        );
+      }
+      return value;
+    }
+  },
+  description: {
+    validate: (value) => {
+      if (typeof value !== "string") {
+        throw new Error(
+          ERROR_PREFIX.concat("`description` should be a string")
+        );
+      }
+      if (typeof value === "string" && value.length > 155) {
+        throw new Error(
+          ERROR_PREFIX.concat(
+            "`description` should not be longer than 155 characters"
+          )
+        );
+      }
+      return value;
+    }
+  },
+  url: {
+    validate: (value) => {
+      if (typeof value !== "string") {
+        throw new Error(ERROR_PREFIX.concat("`url` should be a string"));
+      }
+      if (typeof value === "string" && !value.startsWith("http")) {
+        throw new Error(ERROR_PREFIX.concat("`url` should be a valid URL"));
+      }
+      return value;
+    }
+  },
+  handle: {
+    validate: (value) => {
+      if (typeof value !== "string") {
+        throw new Error(ERROR_PREFIX.concat("`handle` should be a string"));
+      }
+      if (typeof value === "string" && !value.startsWith("@")) {
+        throw new Error(ERROR_PREFIX.concat("`handle` should start with `@`"));
+      }
+      return value;
+    }
+  }
+};
+function generateSeoTags(seoInput) {
+  const tagResults = [];
+  for (const seoKey of Object.keys(seoInput)) {
+    switch (seoKey) {
+      case "title": {
+        const content = validate(schema.title, seoInput.title);
+        const title = renderTitle(seoInput?.titleTemplate, content);
+        if (!title) {
+          break;
+        }
+        tagResults.push(
+          generateTag("title", { title }),
+          generateTag("meta", { property: "og:title", content: title }),
+          generateTag("meta", { name: "twitter:title", content: title })
+        );
+        break;
+      }
+      case "description": {
+        const content = validate(schema.description, seoInput.description);
+        if (!content) {
+          break;
+        }
+        tagResults.push(
+          generateTag("meta", {
+            name: "description",
+            content
+          }),
+          generateTag("meta", {
+            property: "og:description",
+            content
+          }),
+          generateTag("meta", {
+            name: "twitter:description",
+            content
+          })
+        );
+        break;
+      }
+      case "url": {
+        const content = validate(schema.url, seoInput.url);
+        if (!content) {
+          break;
+        }
+        tagResults.push(
+          generateTag("link", {
+            rel: "canonical",
+            href: content
+          }),
+          generateTag("meta", {
+            property: "og:url",
+            content
+          })
+        );
+        break;
+      }
+      case "handle": {
+        const content = validate(schema.handle, seoInput.handle);
+        if (!content) {
+          break;
+        }
+        tagResults.push(
+          generateTag("meta", { name: "twitter:site", content }),
+          generateTag("meta", { name: "twitter:creator", content })
+        );
+        break;
+      }
+      case "media": {
+        let content;
+        const values = ensureArray(seoInput.media);
+        for (const media of values) {
+          if (typeof media === "string") {
+            tagResults.push(
+              generateTag("meta", { name: "og:image", content: media })
+            );
+          }
+          if (media && typeof media === "object") {
+            const type = media.type || "image";
+            const normalizedMedia = media ? {
+              url: media?.url,
+              secure_url: media?.url,
+              type: inferMimeType(media.url),
+              width: media?.width,
+              height: media?.height,
+              alt: media?.altText
+            } : {};
+            for (const key of Object.keys(normalizedMedia)) {
+              if (normalizedMedia[key]) {
+                content = normalizedMedia[key];
+                tagResults.push(
+                  generateTag(
+                    "meta",
+                    {
+                      property: `og:${type}:${key}`,
+                      content
+                    },
+                    normalizedMedia.url
+                  )
+                );
+              }
+            }
+          }
+        }
+        break;
+      }
+      case "jsonLd": {
+        const jsonLdBlocks = ensureArray(seoInput.jsonLd);
+        let index = 0;
+        for (const block of jsonLdBlocks) {
+          if (typeof block !== "object") {
+            continue;
+          }
+          const tag = generateTag(
+            "script",
+            {
+              type: "application/ld+json",
+              children: JSON.stringify(block)
+            },
+            `json-ld-${block?.["@type"] || block?.name || index++}`
+          );
+          tagResults.push(tag);
+        }
+        break;
+      }
+      case "alternates": {
+        const alternates = ensureArray(seoInput.alternates);
+        for (const alternate of alternates) {
+          if (!alternate) {
+            continue;
+          }
+          const { language, url, default: defaultLang } = alternate;
+          const hrefLang = language ? `${language}${defaultLang ? "-default" : ""}` : void 0;
+          tagResults.push(
+            generateTag("link", {
+              rel: "alternate",
+              hrefLang,
+              href: url
+            })
+          );
+        }
+        break;
+      }
+      case "robots": {
+        if (!seoInput.robots) {
+          break;
+        }
+        const {
+          maxImagePreview,
+          maxSnippet,
+          maxVideoPreview,
+          noArchive,
+          noFollow,
+          noImageIndex,
+          noIndex,
+          noSnippet,
+          noTranslate,
+          unavailableAfter
+        } = seoInput.robots;
+        const robotsParams = [
+          noArchive && "noarchive",
+          noImageIndex && "noimageindex",
+          noSnippet && "nosnippet",
+          noTranslate && `notranslate`,
+          maxImagePreview && `max-image-preview:${maxImagePreview}`,
+          maxSnippet && `max-snippet:${maxSnippet}`,
+          maxVideoPreview && `max-video-preview:${maxVideoPreview}`,
+          unavailableAfter && `unavailable_after:${unavailableAfter}`
+        ];
+        let robotsParam = (noIndex ? "noindex" : "index") + "," + (noFollow ? "nofollow" : "follow");
+        for (let param of robotsParams) {
+          if (param) {
+            robotsParam += `,${param}`;
+          }
+        }
+        tagResults.push(
+          generateTag("meta", { name: "robots", content: robotsParam })
+        );
+        break;
+      }
+    }
+  }
+  return tagResults.flat().sort((a, b) => a.key.localeCompare(b.key));
+}
+function generateTag(tagName, input, group) {
+  const tag = { tag: tagName, props: {}, key: "" };
+  if (tagName === "title") {
+    tag.children = input.title;
+    tag.key = generateKey(tag);
+    return tag;
+  }
+  if (tagName === "script") {
+    tag.children = typeof input.children === "string" ? input.children : "";
+    tag.key = generateKey(tag, group);
+    delete input.children;
+    tag.props = input;
+    return tag;
+  }
+  tag.props = input;
+  Object.keys(tag.props).forEach(
+    (key) => !tag.props[key] && delete tag.props[key]
+  );
+  tag.key = generateKey(tag, group);
+  return tag;
+}
+function generateKey(tag, group) {
+  const { tag: tagName, props } = tag;
+  if (tagName === "title") {
+    return "0-title";
+  }
+  if (tagName === "meta") {
+    const priority = props.content === group && typeof props.property === "string" && !props.property.endsWith("secure_url") && "0";
+    const groupName = [group, priority];
+    return [tagName, ...groupName, props.property || props.name].filter((x) => x).join("-");
+  }
+  if (tagName === "link") {
+    const key = [tagName, props.rel, props.hrefLang || props.media].filter((x) => x).join("-");
+    return key.replace(/\s+/g, "-");
+  }
+  if (tagName === "script") {
+    return `${tagName}-${group}`;
+  }
+  return `${tagName}-${props.type}`;
+}
+function renderTitle(template, title) {
+  if (!title) {
+    return void 0;
+  }
+  if (!template) {
+    return title;
+  }
+  if (typeof template === "function") {
+    return template(title);
+  }
+  return template.replace("%s", title ?? "");
+}
+function inferMimeType(url) {
+  const ext = url && url.split(".").pop();
+  switch (ext) {
+    case "svg":
+      return "image/svg+xml";
+    case "png":
+      return "image/png";
+    case "gif":
+      return "image/gif";
+    case "swf":
+      return "application/x-shockwave-flash";
+    case "mp3":
+      return "audio/mpeg";
+    case "jpg":
+    case "jpeg":
+    default:
+      return "image/jpeg";
+  }
+}
+function ensureArray(value) {
+  return Array.isArray(value) ? value : [value];
+}
+function validate(schema2, data) {
+  try {
+    return schema2.validate(data);
+  } catch (error) {
+    console.warn(error.message);
+    return data;
+  }
+}
+
+// src/seo/seo.ts
+var SeoLogger = react.lazy(() => Promise.resolve().then(() => (init_log_seo_tags(), log_seo_tags_exports)));
+function Seo({ debug }) {
+  const matches = react$1.useMatches();
+  const location = react$1.useLocation();
+  const seoConfig = react.useMemo(() => {
+    return matches.flatMap((match) => {
+      const { handle, ...routeMatch } = match;
+      const routeData = { ...routeMatch, ...location };
+      const handleSeo = handle?.seo;
+      const loaderSeo = routeMatch?.data?.seo;
+      if (!handleSeo && !loaderSeo) {
+        return [];
+      }
+      if (handleSeo) {
+        return recursivelyInvokeOrReturn(handle.seo, routeData);
+      } else {
+        return [loaderSeo];
+      }
+    }).reduce((acc, current) => {
+      Object.keys(current).forEach(
+        (key) => !current[key] && delete current[key]
+      );
+      const { jsonLd } = current;
+      if (!jsonLd) {
+        return { ...acc, ...current };
+      }
+      if (!acc?.jsonLd) {
+        return { ...acc, ...current, jsonLd: [jsonLd] };
+      } else {
+        if (Array.isArray(jsonLd)) {
+          return {
+            ...acc,
+            ...current,
+            jsonLd: [...acc.jsonLd, ...jsonLd]
+          };
+        } else {
+          return {
+            ...acc,
+            ...current,
+            jsonLd: [...acc.jsonLd, jsonLd]
+          };
+        }
+      }
+    }, {});
+  }, [matches, location]);
+  const { html, loggerMarkup } = react.useMemo(() => {
+    const headTags = generateSeoTags(seoConfig);
+    const html2 = headTags.map((tag) => {
+      if (tag.tag === "script") {
+        return react.createElement(tag.tag, {
+          ...tag.props,
+          key: tag.key,
+          dangerouslySetInnerHTML: { __html: tag.children }
+        });
+      }
+      return react.createElement(tag.tag, { ...tag.props, key: tag.key }, tag.children);
+    });
+    const loggerMarkup2 = react.createElement(
+      react.Suspense,
+      { fallback: null },
+      react.createElement(SeoLogger, { headTags })
+    );
+    return { html: html2, loggerMarkup: loggerMarkup2 };
+  }, [seoConfig]);
+  return react.createElement(react.Fragment, null, html, debug && loggerMarkup);
+}
+function recursivelyInvokeOrReturn(value, ...rest) {
+  if (value instanceof Function) {
+    return recursivelyInvokeOrReturn(value(...rest), ...rest);
+  }
+  let result = {};
+  if (Array.isArray(value)) {
+    result = value.reduce((acc, item) => {
+      return [...acc, recursivelyInvokeOrReturn(item)];
+    }, []);
+    return result;
+  }
+  if (value instanceof Object) {
+    const entries = Object.entries(value);
+    entries.forEach(([key, val]) => {
+      result[key] = recursivelyInvokeOrReturn(val, ...rest);
+    });
+    return result;
+  }
+  return value;
+}
+function Pagination({
+  connection,
+  children = () => {
+    console.warn("<Pagination> requires children to work properly");
+    return null;
+  }
+}) {
+  const transition = react$1.useNavigation();
+  const isLoading = transition.state === "loading";
+  const {
+    endCursor,
+    hasNextPage,
+    hasPreviousPage,
+    nextPageUrl,
+    nodes,
+    previousPageUrl,
+    startCursor
+  } = usePagination(connection);
+  const state = react.useMemo(
+    () => ({
+      pageInfo: {
+        endCursor,
+        hasPreviousPage,
+        startCursor
+      },
+      nodes
+    }),
+    [endCursor, hasPreviousPage, startCursor, nodes]
+  );
+  const NextLink = react.useMemo(
+    () => function NextLink2(props) {
+      return hasNextPage ? react.createElement(react$1.Link, {
+        preventScrollReset: true,
+        ...props,
+        to: nextPageUrl,
+        state,
+        replace: true
+      }) : null;
+    },
+    [hasNextPage, nextPageUrl]
+  );
+  const PreviousLink = react.useMemo(
+    () => function PrevLink(props) {
+      return hasPreviousPage ? react.createElement(react$1.Link, {
+        preventScrollReset: true,
+        ...props,
+        to: previousPageUrl,
+        state,
+        replace: true
+      }) : null;
+    },
+    [hasPreviousPage, previousPageUrl]
+  );
+  return children({
+    state,
+    hasNextPage,
+    hasPreviousPage,
+    isLoading,
+    nextPageUrl,
+    nodes,
+    previousPageUrl,
+    NextLink,
+    PreviousLink
+  });
+}
+function usePagination(connection) {
+  const { state, search } = react$1.useLocation();
+  const params = new URLSearchParams(search);
+  const direction = params.get("direction");
+  const isPrevious = direction === "previous";
+  const nodes = react.useMemo(() => {
+    if (!state || !state?.nodes) {
+      return hydrogenReact.flattenConnection(connection);
+    }
+    if (isPrevious) {
+      return [...hydrogenReact.flattenConnection(connection), ...state.nodes];
+    } else {
+      return [...state.nodes, ...hydrogenReact.flattenConnection(connection)];
+    }
+  }, [state, connection]);
+  const currentPageInfo = react.useMemo(() => {
+    let pageStartCursor = state?.pageInfo?.startCursor === void 0 ? connection.pageInfo.startCursor : state.pageInfo.startCursor;
+    let pageEndCursor = state?.pageInfo?.endCursor === void 0 ? connection.pageInfo.endCursor : state.pageInfo.endCursor;
+    if (state?.nodes) {
+      if (isPrevious) {
+        pageStartCursor = connection.pageInfo.startCursor;
+      } else {
+        pageEndCursor = connection.pageInfo.endCursor;
+      }
+    }
+    const previousPageExists = state?.pageInfo?.hasPreviousPage === void 0 ? connection.pageInfo.hasPreviousPage : state.pageInfo.hasPreviousPage;
+    const nextPageExists = state?.pageInfo?.hasNextPage === void 0 ? connection.pageInfo.hasNextPage : state.pageInfo.hasNextPage;
+    return {
+      startCursor: pageStartCursor,
+      endCursor: pageEndCursor,
+      hasPreviousPage: previousPageExists,
+      hasNextPage: nextPageExists
+    };
+  }, [
+    isPrevious,
+    state,
+    connection.pageInfo.hasNextPage,
+    connection.pageInfo.hasPreviousPage,
+    connection.pageInfo.startCursor,
+    connection.pageInfo.endCursor
+  ]);
+  const previousPageUrl = react.useMemo(() => {
+    const params2 = new URLSearchParams(search);
+    params2.set("direction", "previous");
+    currentPageInfo.startCursor && params2.set("cursor", currentPageInfo.startCursor);
+    return `?${params2.toString()}`;
+  }, [search, currentPageInfo.startCursor]);
+  const nextPageUrl = react.useMemo(() => {
+    const params2 = new URLSearchParams(search);
+    params2.set("direction", "next");
+    currentPageInfo.endCursor && params2.set("cursor", currentPageInfo.endCursor);
+    return `?${params2.toString()}`;
+  }, [search, currentPageInfo.endCursor]);
+  return { ...currentPageInfo, previousPageUrl, nextPageUrl, nodes };
+}
+function getPaginationVariables(request, options = { pageBy: 20 }) {
+  if (!(request instanceof Request)) {
+    throw new Error(
+      "getPaginationVariables must be called with the Request object passed to your loader function"
+    );
+  }
+  const { pageBy } = options;
+  const searchParams = new URLSearchParams(new URL(request.url).search);
+  const cursor = searchParams.get("cursor") ?? void 0;
+  const direction = searchParams.get("direction") === "previous" ? "previous" : "next";
+  const isPrevious = direction === "previous";
+  const prevPage = {
+    last: pageBy,
+    startCursor: cursor ?? null
+  };
+  const nextPage = {
+    first: pageBy,
+    endCursor: cursor ?? null
+  };
+  const variables = isPrevious ? prevPage : nextPage;
+  return variables;
+}
+var INPUT_NAME = "cartFormInput";
+function CartForm({
+  children,
+  action,
+  inputs,
+  route
+}) {
+  const fetcher = react$1.useFetcher();
+  return /* @__PURE__ */ jsxRuntime.jsxs(fetcher.Form, {
+    action: route || "",
+    method: "post",
+    children: [
+      (action || inputs) && /* @__PURE__ */ jsxRuntime.jsx("input", {
+        type: "hidden",
+        name: INPUT_NAME,
+        value: JSON.stringify({ action, inputs })
+      }),
+      typeof children === "function" ? children(fetcher) : children
+    ]
+  });
+}
+CartForm.INPUT_NAME = INPUT_NAME;
+CartForm.ACTIONS = {
+  AttributesUpdateInput: "AttributesUpdateInput",
+  BuyerIdentityUpdate: "BuyerIdentityUpdate",
+  Create: "Create",
+  DiscountCodesUpdate: "DiscountCodesUpdate",
+  LinesAdd: "LinesAdd",
+  LinesRemove: "LinesRemove",
+  LinesUpdate: "LinesUpdate",
+  NoteUpdate: "NoteUpdate",
+  SelectedDeliveryOptionsUpdate: "SelectedDeliveryOptionsUpdate",
+  MetafieldsSet: "MetafieldsSet",
+  MetafieldDelete: "MetafieldDelete"
+};
+function getFormInput(formData) {
+  const data = {};
+  for (const pair of formData.entries()) {
+    const key = pair[0];
+    const values = formData.getAll(key);
+    data[key] = values.length > 1 ? values : pair[1];
+  }
+  const { cartFormInput, ...otherData } = data;
+  const { action, inputs } = cartFormInput ? JSON.parse(String(cartFormInput)) : {};
+  return {
+    action,
+    inputs: {
+      ...inputs,
+      ...otherData
+    }
+  };
+}
+CartForm.getFormInput = getFormInput;
+
+// src/cart/queries/cart-fragments.ts
+var USER_ERROR_FRAGMENT = `#graphql
+  fragment CartApiError on CartUserError {
+    message
+    field
+    code
+  }
+`;
+var MINIMAL_CART_FRAGMENT = `#graphql
+  fragment CartApiMutation on Cart {
+    id
+    totalQuantity
+  }
+`;
+
+// src/cart/queries/cartCreateDefault.ts
+function cartCreateDefault(options) {
+  return async (input, optionalParams) => {
+    const { cartId, ...restOfOptionalParams } = optionalParams || {};
+    const { cartCreate } = await options.storefront.mutate(CART_CREATE_MUTATION(options.cartFragment), {
+      variables: {
+        input,
+        ...restOfOptionalParams
+      }
+    });
+    return cartCreate;
+  };
+}
+var CART_CREATE_MUTATION = (cartFragment = MINIMAL_CART_FRAGMENT) => `#graphql
+  mutation cartCreate(
+    $input: CartInput!
+    $country: CountryCode = ZZ
+    $language: LanguageCode
+  ) @inContext(country: $country, language: $language) {
+    cartCreate(input: $input) {
+      cart {
+        ...CartApiMutation
+        checkoutUrl
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+  ${cartFragment}
+  ${USER_ERROR_FRAGMENT}
+`;
+
+// src/cart/queries/cartGetDefault.ts
+function cartGetDefault(options) {
+  return async (cartInput) => {
+    const cartId = options.getCartId();
+    if (!cartId)
+      return null;
+    const { cart } = await options.storefront.query(
+      CART_QUERY(options.cartFragment),
+      {
+        variables: {
+          cartId,
+          ...cartInput
+        },
+        cache: options.storefront.CacheNone()
+      }
+    );
+    return cart;
+  };
+}
+var CART_QUERY = (cartFragment = DEFAULT_CART_FRAGMENT) => `#graphql
+  query CartQuery(
+    $cartId: ID!
+    $numCartLines: Int = 100
+    $country: CountryCode = ZZ
+    $language: LanguageCode
+  ) @inContext(country: $country, language: $language) {
+    cart(id: $cartId) {
+      ...CartApiQuery
+    }
+  }
+
+  ${cartFragment}
+`;
+var DEFAULT_CART_FRAGMENT = `#graphql
+  fragment CartApiQuery on Cart {
+    id
+    checkoutUrl
+    totalQuantity
+    buyerIdentity {
+      countryCode
+      customer {
+        id
+        email
+        firstName
+        lastName
+        displayName
+      }
+      email
+      phone
+    }
+    lines(first: $numCartLines) {
+      edges {
+        node {
+          id
+          quantity
+          attributes {
+            key
+            value
+          }
+          cost {
+            totalAmount {
+              amount
+              currencyCode
+            }
+            amountPerQuantity {
+              amount
+              currencyCode
+            }
+            compareAtAmountPerQuantity {
+              amount
+              currencyCode
+            }
+          }
+          merchandise {
+            ... on ProductVariant {
+              id
+              availableForSale
+              compareAtPrice {
+                ...CartApiMoney
+              }
+              price {
+                ...CartApiMoney
+              }
+              requiresShipping
+              title
+              image {
+                ...CartApiImage
+              }
+              product {
+                handle
+                title
+                id
+              }
+              selectedOptions {
+                name
+                value
+              }
+            }
+          }
+        }
+      }
+    }
+    cost {
+      subtotalAmount {
+        ...CartApiMoney
+      }
+      totalAmount {
+        ...CartApiMoney
+      }
+      totalDutyAmount {
+        ...CartApiMoney
+      }
+      totalTaxAmount {
+        ...CartApiMoney
+      }
+    }
+    note
+    attributes {
+      key
+      value
+    }
+    discountCodes {
+      applicable
+      code
+    }
+  }
+
+  fragment CartApiMoney on MoneyV2 {
+    currencyCode
+    amount
+  }
+
+  fragment CartApiImage on Image {
+    id
+    url
+    altText
+    width
+    height
+  }
+`;
+
+// src/cart/queries/cartLinesAddDefault.ts
+function cartLinesAddDefault(options) {
+  return async (lines, optionalParams) => {
+    const { cartLinesAdd } = await options.storefront.mutate(CART_LINES_ADD_MUTATION(options.cartFragment), {
+      variables: {
+        cartId: options.getCartId(),
+        lines,
+        ...optionalParams
+      }
+    });
+    return cartLinesAdd;
+  };
+}
+var CART_LINES_ADD_MUTATION = (cartFragment = MINIMAL_CART_FRAGMENT) => `#graphql
+  mutation cartLinesAdd(
+    $cartId: ID!
+    $lines: [CartLineInput!]!
+    $country: CountryCode = ZZ
+    $language: LanguageCode
+  ) @inContext(country: $country, language: $language) {
+    cartLinesAdd(cartId: $cartId, lines: $lines) {
+      cart {
+        ...CartApiMutation
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+
+  ${cartFragment}
+  ${USER_ERROR_FRAGMENT}
+`;
+
+// src/cart/queries/cartLinesUpdateDefault.ts
+function cartLinesUpdateDefault(options) {
+  return async (lines, optionalParams) => {
+    const { cartLinesUpdate } = await options.storefront.mutate(CART_LINES_UPDATE_MUTATION(options.cartFragment), {
+      variables: {
+        cartId: options.getCartId(),
+        lines,
+        ...optionalParams
+      }
+    });
+    return cartLinesUpdate;
+  };
+}
+var CART_LINES_UPDATE_MUTATION = (cartFragment = MINIMAL_CART_FRAGMENT) => `#graphql
+  mutation cartLinesUpdate(
+    $cartId: ID!
+    $lines: [CartLineUpdateInput!]!
+    $language: LanguageCode
+    $country: CountryCode
+  ) @inContext(country: $country, language: $language) {
+    cartLinesUpdate(cartId: $cartId, lines: $lines) {
+      cart {
+        ...CartApiMutation
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+
+  ${cartFragment}
+  ${USER_ERROR_FRAGMENT}
+`;
+
+// src/cart/queries/cartLinesRemoveDefault.ts
+function cartLinesRemoveDefault(options) {
+  return async (lineIds, optionalParams) => {
+    const { cartLinesRemove } = await options.storefront.mutate(CART_LINES_REMOVE_MUTATION(options.cartFragment), {
+      variables: {
+        cartId: options.getCartId(),
+        lineIds,
+        ...optionalParams
+      }
+    });
+    return cartLinesRemove;
+  };
+}
+var CART_LINES_REMOVE_MUTATION = (cartFragment = MINIMAL_CART_FRAGMENT) => `#graphql
+  mutation cartLinesRemove(
+    $cartId: ID!
+    $lineIds: [ID!]!
+    $language: LanguageCode
+    $country: CountryCode
+  ) @inContext(country: $country, language: $language) {
+    cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
+      cart {
+        ...CartApiMutation
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+
+  ${cartFragment}
+  ${USER_ERROR_FRAGMENT}
+`;
+
+// src/cart/queries/cartDiscountCodesUpdateDefault.ts
+function cartDiscountCodesUpdateDefault(options) {
+  return async (discountCodes, optionalParams) => {
+    const uniqueCodes = discountCodes.filter((value, index, array) => {
+      return array.indexOf(value) === index;
+    });
+    const { cartDiscountCodesUpdate } = await options.storefront.mutate(CART_DISCOUNT_CODE_UPDATE_MUTATION(options.cartFragment), {
+      variables: {
+        cartId: options.getCartId(),
+        discountCodes: uniqueCodes,
+        ...optionalParams
+      }
+    });
+    return cartDiscountCodesUpdate;
+  };
+}
+var CART_DISCOUNT_CODE_UPDATE_MUTATION = (cartFragment = MINIMAL_CART_FRAGMENT) => `#graphql
+  mutation cartDiscountCodesUpdate(
+    $cartId: ID!
+    $discountCodes: [String!]
+    $language: LanguageCode
+    $country: CountryCode
+  ) @inContext(country: $country, language: $language) {
+    cartDiscountCodesUpdate(cartId: $cartId, discountCodes: $discountCodes) {
+      cart {
+        ...CartApiMutation
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+  ${cartFragment}
+  ${USER_ERROR_FRAGMENT}
+`;
+
+// src/cart/queries/cartBuyerIdentityUpdateDefault.ts
+function cartBuyerIdentityUpdateDefault(options) {
+  return async (buyerIdentity, optionalParams) => {
+    const { cartBuyerIdentityUpdate } = await options.storefront.mutate(CART_BUYER_IDENTITY_UPDATE_MUTATION(options.cartFragment), {
+      variables: {
+        cartId: options.getCartId(),
+        buyerIdentity,
+        ...optionalParams
+      }
+    });
+    return cartBuyerIdentityUpdate;
+  };
+}
+var CART_BUYER_IDENTITY_UPDATE_MUTATION = (cartFragment = MINIMAL_CART_FRAGMENT) => `#graphql
+  mutation cartBuyerIdentityUpdate(
+    $cartId: ID!
+    $buyerIdentity: CartBuyerIdentityInput!
+    $language: LanguageCode
+    $country: CountryCode
+  ) @inContext(country: $country, language: $language) {
+    cartBuyerIdentityUpdate(cartId: $cartId, buyerIdentity: $buyerIdentity) {
+      cart {
+        ...CartApiMutation
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+  ${cartFragment}
+  ${USER_ERROR_FRAGMENT}
+`;
+
+// src/cart/queries/cartNoteUpdateDefault.ts
+function cartNoteUpdateDefault(options) {
+  return async (note, optionalParams) => {
+    const { cartNoteUpdate } = await options.storefront.mutate(CART_NOTE_UPDATE_MUTATION(options.cartFragment), {
+      variables: {
+        cartId: options.getCartId(),
+        note,
+        ...optionalParams
+      }
+    });
+    return cartNoteUpdate;
+  };
+}
+var CART_NOTE_UPDATE_MUTATION = (cartFragment = MINIMAL_CART_FRAGMENT) => `#graphql
+  mutation cartNoteUpdate(
+    $cartId: ID!
+    $note: String
+    $language: LanguageCode
+    $country: CountryCode
+  ) @inContext(country: $country, language: $language) {
+    cartNoteUpdate(cartId: $cartId, note: $note) {
+      cart {
+        ...CartApiMutation
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+  ${cartFragment}
+  ${USER_ERROR_FRAGMENT}
+`;
+
+// src/cart/queries/cartSelectedDeliveryOptionsUpdateDefault.ts
+function cartSelectedDeliveryOptionsUpdateDefault(options) {
+  return async (selectedDeliveryOptions, optionalParams) => {
+    const { cartSelectedDeliveryOptionsUpdate } = await options.storefront.mutate(CART_SELECTED_DELIVERY_OPTIONS_UPDATE_MUTATION(options.cartFragment), {
+      variables: {
+        cartId: options.getCartId(),
+        selectedDeliveryOptions,
+        ...optionalParams
+      }
+    });
+    return cartSelectedDeliveryOptionsUpdate;
+  };
+}
+var CART_SELECTED_DELIVERY_OPTIONS_UPDATE_MUTATION = (cartFragment = MINIMAL_CART_FRAGMENT) => `#graphql
+  mutation cartSelectedDeliveryOptionsUpdate(
+    $cartId: ID!
+    $selectedDeliveryOptions: [CartSelectedDeliveryOptionInput!]!
+    $language: LanguageCode
+    $country: CountryCode
+  ) @inContext(country: $country, language: $language) {
+    cartSelectedDeliveryOptionsUpdate(cartId: $cartId, selectedDeliveryOptions: $selectedDeliveryOptions) {
+      cart {
+        ...CartApiMutation
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+  ${cartFragment}
+  ${USER_ERROR_FRAGMENT}
+`;
+
+// src/cart/queries/cartAttributesUpdateDefault.ts
+function cartAttributesUpdateDefault(options) {
+  return async (attributes, optionalParams) => {
+    const { cartAttributesUpdate } = await options.storefront.mutate(CART_ATTRIBUTES_UPDATE_MUTATION(options.cartFragment), {
+      variables: {
+        cartId: optionalParams?.cartId || options.getCartId(),
+        attributes
+      }
+    });
+    return cartAttributesUpdate;
+  };
+}
+var CART_ATTRIBUTES_UPDATE_MUTATION = (cartFragment = MINIMAL_CART_FRAGMENT) => `#graphql
+  mutation cartAttributesUpdate(
+    $cartId: ID!
+    $attributes: [AttributeInput!]!
+  ) {
+    cartAttributesUpdate(cartId: $cartId, attributes: $attributes) {
+      cart {
+        ...CartApiMutation
+      }
+      errors: userErrors {
+        ...CartApiError
+      }
+    }
+  }
+  ${cartFragment}
+  ${USER_ERROR_FRAGMENT}
+`;
+
+// src/cart/queries/cartMetafieldsSetDefault.ts
+function cartMetafieldsSetDefault(options) {
+  return async (metafields, optionalParams) => {
+    const ownerId = optionalParams?.cartId || options.getCartId();
+    const metafieldsWithOwnerId = metafields.map(
+      (metafield) => ({
+        ...metafield,
+        ownerId
+      })
+    );
+    const { cartMetafieldsSet } = await options.storefront.mutate(CART_METAFIELD_SET_MUTATION(), {
+      variables: { metafields: metafieldsWithOwnerId }
+    });
+    return {
+      cart: {
+        id: ownerId
+      },
+      errors: cartMetafieldsSet.errors
+    };
+  };
+}
+var CART_METAFIELD_SET_MUTATION = () => `#graphql
+  mutation cartMetafieldsSet(
+    $metafields: [CartMetafieldsSetInput!]!
+    $language: LanguageCode
+    $country: CountryCode
+  ) @inContext(country: $country, language: $language) {
+    cartMetafieldsSet(metafields: $metafields) {
+      errors: userErrors {
+        code
+        elementIndex
+        field
+        message
+      }
+    }
+  }
+`;
+
+// src/cart/queries/cartMetafieldDeleteDefault.ts
+function cartMetafieldDeleteDefault(options) {
+  return async (key, optionalParams) => {
+    const ownerId = optionalParams?.cartId || options.getCartId();
+    const { cartMetafieldDelete } = await options.storefront.mutate(CART_METAFIELD_DELETE_MUTATION(), {
+      variables: {
+        input: {
+          ownerId,
+          key
+        }
+      }
+    });
+    return {
+      cart: {
+        id: ownerId
+      },
+      errors: cartMetafieldDelete.errors
+    };
+  };
+}
+var CART_METAFIELD_DELETE_MUTATION = () => `#graphql
+  mutation cartMetafieldDelete(
+    $input: CartMetafieldDeleteInput!
+  ) {
+    cartMetafieldDelete(input: $input) {
+      errors: userErrors {
+        code
+        field
+        message
+      }
+    }
+  }
+`;
+
+// ../../node_modules/worktop/cookie/index.mjs
+var g = /* @__PURE__ */ new Set([
+  "domain",
+  "path",
+  "max-age",
+  "expires",
+  "samesite",
+  "secure",
+  "httponly"
+]);
+function u(a) {
+  let r = {}, e, t, n = 0, m = a.split(/;\s*/g), s, i;
+  for (; n < m.length; n++)
+    if (t = m[n], e = t.indexOf("="), ~e) {
+      if (s = t.substring(0, e++).trim(), i = t.substring(e).trim(), i[0] === '"' && (i = i.substring(1, i.length - 1)), ~i.indexOf("%"))
+        try {
+          i = decodeURIComponent(i);
+        } catch (f) {
+        }
+      g.has(t = s.toLowerCase()) ? t === "expires" ? r.expires = new Date(i) : t === "max-age" ? r.maxage = +i : r[t] = i : r[s] = i;
+    } else
+      (s = t.trim().toLowerCase()) && (s === "httponly" || s === "secure") && (r[s] = true);
+  return r;
+}
+function l(a, r, e = {}) {
+  let t = a + "=" + encodeURIComponent(r);
+  return e.expires && (t += "; Expires=" + new Date(e.expires).toUTCString()), e.maxage != null && e.maxage >= 0 && (t += "; Max-Age=" + (e.maxage | 0)), e.domain && (t += "; Domain=" + e.domain), e.path && (t += "; Path=" + e.path), e.samesite && (t += "; SameSite=" + e.samesite), (e.secure || e.samesite === "None") && (t += "; Secure"), e.httponly && (t += "; HttpOnly"), t;
+}
+
+// src/cart/cartGetIdDefault.ts
+var cartGetIdDefault = (requestHeaders) => {
+  const cookies = u(requestHeaders.get("Cookie") || "");
+  return () => {
+    return cookies.cart ? `gid://shopify/Cart/${cookies.cart}` : void 0;
+  };
+};
+
+// src/cart/cartSetIdDefault.ts
+var cartSetIdDefault = (cookieOptions) => {
+  return (cartId) => {
+    const headers = new Headers();
+    headers.append(
+      "Set-Cookie",
+      l("cart", cartId.split("/").pop() || "", {
+        path: "/",
+        ...cookieOptions
+      })
+    );
+    return headers;
+  };
+};
+
+// src/cart/createCartHandler.ts
+function createCartHandler(options) {
+  const {
+    getCartId,
+    setCartId,
+    storefront,
+    cartQueryFragment,
+    cartMutateFragment
+  } = options;
+  const mutateOptions = {
+    storefront,
+    getCartId,
+    cartFragment: cartMutateFragment
+  };
+  const cartId = getCartId();
+  const cartCreate = cartCreateDefault(mutateOptions);
+  const methods = {
+    get: cartGetDefault({
+      storefront,
+      getCartId,
+      cartFragment: cartQueryFragment
+    }),
+    getCartId,
+    setCartId,
+    create: cartCreate,
+    addLines: async (lines, optionalParams) => {
+      return cartId || optionalParams?.cartId ? await cartLinesAddDefault(mutateOptions)(lines, optionalParams) : await cartCreate({ lines }, optionalParams);
+    },
+    updateLines: cartLinesUpdateDefault(mutateOptions),
+    removeLines: cartLinesRemoveDefault(mutateOptions),
+    updateDiscountCodes: async (discountCodes, optionalParams) => {
+      return cartId || optionalParams?.cartId ? await cartDiscountCodesUpdateDefault(mutateOptions)(
+        discountCodes,
+        optionalParams
+      ) : await cartCreate({ discountCodes }, optionalParams);
+    },
+    updateBuyerIdentity: async (buyerIdentity, optionalParams) => {
+      return cartId || optionalParams?.cartId ? await cartBuyerIdentityUpdateDefault(mutateOptions)(
+        buyerIdentity,
+        optionalParams
+      ) : await cartCreate({ buyerIdentity }, optionalParams);
+    },
+    updateNote: async (note, optionalParams) => {
+      return cartId || optionalParams?.cartId ? await cartNoteUpdateDefault(mutateOptions)(note, optionalParams) : await cartCreate({ note }, optionalParams);
+    },
+    updateSelectedDeliveryOption: cartSelectedDeliveryOptionsUpdateDefault(mutateOptions),
+    updateAttributes: async (attributes, optionalParams) => {
+      return cartId || optionalParams?.cartId ? await cartAttributesUpdateDefault(mutateOptions)(
+        attributes,
+        optionalParams
+      ) : await cartCreate({ attributes }, optionalParams);
+    },
+    setMetafields: async (metafields, optionalParams) => {
+      return cartId || optionalParams?.cartId ? await cartMetafieldsSetDefault(mutateOptions)(
+        metafields,
+        optionalParams
+      ) : await cartCreate({ metafields }, optionalParams);
+    },
+    deleteMetafield: cartMetafieldDeleteDefault(mutateOptions)
+  };
+  if ("customMethods__unstable" in options) {
+    return {
+      ...methods,
+      ...options.customMethods__unstable ?? {}
+    };
+  } else {
+    return methods;
+  }
+}
+function VariantSelector({
+  handle,
+  options = [],
+  variants: _variants = [],
+  children
+}) {
+  const variants = _variants instanceof Array ? _variants : hydrogenReact.flattenConnection(_variants);
+  const { searchParams, path, alreadyOnProductPage } = useVariantPath(handle);
+  const optionsWithOnlyOneValue = options.filter(
+    (option) => option?.values?.length === 1
+  );
+  return react.createElement(
+    react.Fragment,
+    null,
+    ...react.useMemo(() => {
+      return options.filter((option) => option?.values?.length > 1).map((option) => {
+        let activeValue;
+        let availableValues = [];
+        for (let value of option.values) {
+          const clonedSearchParams = new URLSearchParams(
+            alreadyOnProductPage ? searchParams : void 0
+          );
+          clonedSearchParams.set(option.name, value);
+          optionsWithOnlyOneValue.forEach((option2) => {
+            clonedSearchParams.set(option2.name, option2.values[0]);
+          });
+          const variant = variants.find(
+            (variant2) => variant2?.selectedOptions?.every(
+              (selectedOption) => clonedSearchParams.get(selectedOption?.name) === selectedOption?.value
+            )
+          );
+          const currentParam = searchParams.get(option.name);
+          const calculatedActiveValue = currentParam ? currentParam === value : false;
+          if (calculatedActiveValue) {
+            activeValue = value;
+          }
+          const searchString = "?" + clonedSearchParams.toString();
+          availableValues.push({
+            value,
+            isAvailable: variant ? variant.availableForSale : true,
+            to: path + searchString,
+            search: searchString,
+            isActive: calculatedActiveValue
+          });
+        }
+        return children({
+          option: {
+            name: option.name,
+            value: activeValue,
+            values: availableValues
+          }
+        });
+      });
+    }, [options, variants, children])
+  );
+}
+var getSelectedProductOptions = (request) => {
+  if (!(request instanceof Request))
+    throw new TypeError(`Expected a Request instance, got ${typeof request}`);
+  const searchParams = new URL(request.url).searchParams;
+  const selectedOptions = [];
+  searchParams.forEach((value, name) => {
+    selectedOptions.push({ name, value });
+  });
+  return selectedOptions;
+};
+function useVariantPath(handle) {
+  const { pathname, search } = react$1.useLocation();
+  return react.useMemo(() => {
+    const match = /(\/[a-zA-Z]{2}-[a-zA-Z]{2}\/)/g.exec(pathname);
+    const isLocalePathname = match && match.length > 0;
+    const path = isLocalePathname ? `${match[0]}products/${handle}` : `/products/${handle}`;
+    const searchParams = new URLSearchParams(search);
+    return {
+      searchParams,
+      alreadyOnProductPage: path === pathname,
+      path
+    };
+  }, [pathname, search, handle]);
+}
+//! @see https://shopify.dev/docs/api/storefront/2023-07/mutations/cartMetafieldDelete
+//! @see https://shopify.dev/docs/api/storefront/latest/mutations/cartBuyerIdentityUpdate
+//! @see https://shopify.dev/docs/api/storefront/latest/mutations/cartDiscountCodesUpdate
+//! @see https://shopify.dev/docs/api/storefront/latest/mutations/cartMetafieldsSet
+//! @see https://shopify.dev/docs/api/storefront/latest/mutations/cartNoteUpdate
+//! @see https://shopify.dev/docs/api/storefront/latest/mutations/cartSelectedDeliveryOptionsUpdate
+//! @see https://shopify.dev/docs/api/storefront/latest/queries/cart
+//! @see: https://shopify.dev/docs/api/storefront/latest/mutations/cartCreate
+//! @see: https://shopify.dev/docs/api/storefront/latest/mutations/cartLinesAdd
+//! @see: https://shopify.dev/docs/api/storefront/latest/mutations/cartLinesRemove
+//! @see: https://shopify.dev/docs/api/storefront/latest/mutations/cartLinesUpdate
+
+Object.defineProperty(exports, 'AnalyticsEventName', {
+  enumerable: true,
+  get: function () { return hydrogenReact.AnalyticsEventName; }
+});
+Object.defineProperty(exports, 'AnalyticsPageType', {
+  enumerable: true,
+  get: function () { return hydrogenReact.AnalyticsPageType; }
+});
+Object.defineProperty(exports, 'ExternalVideo', {
+  enumerable: true,
+  get: function () { return hydrogenReact.ExternalVideo; }
+});
+Object.defineProperty(exports, 'IMAGE_FRAGMENT', {
+  enumerable: true,
+  get: function () { return hydrogenReact.IMAGE_FRAGMENT; }
+});
+Object.defineProperty(exports, 'Image', {
+  enumerable: true,
+  get: function () { return hydrogenReact.Image; }
+});
+Object.defineProperty(exports, 'MediaFile', {
+  enumerable: true,
+  get: function () { return hydrogenReact.MediaFile; }
+});
+Object.defineProperty(exports, 'ModelViewer', {
+  enumerable: true,
+  get: function () { return hydrogenReact.ModelViewer; }
+});
+Object.defineProperty(exports, 'Money', {
+  enumerable: true,
+  get: function () { return hydrogenReact.Money; }
+});
+Object.defineProperty(exports, 'ShopPayButton', {
+  enumerable: true,
+  get: function () { return hydrogenReact.ShopPayButton; }
+});
+Object.defineProperty(exports, 'ShopifySalesChannel', {
+  enumerable: true,
+  get: function () { return hydrogenReact.ShopifySalesChannel; }
+});
+Object.defineProperty(exports, 'Video', {
+  enumerable: true,
+  get: function () { return hydrogenReact.Video; }
+});
+Object.defineProperty(exports, 'flattenConnection', {
+  enumerable: true,
+  get: function () { return hydrogenReact.flattenConnection; }
+});
+Object.defineProperty(exports, 'getClientBrowserParameters', {
+  enumerable: true,
+  get: function () { return hydrogenReact.getClientBrowserParameters; }
+});
+Object.defineProperty(exports, 'getShopifyCookies', {
+  enumerable: true,
+  get: function () { return hydrogenReact.getShopifyCookies; }
+});
+Object.defineProperty(exports, 'parseGid', {
+  enumerable: true,
+  get: function () { return hydrogenReact.parseGid; }
+});
+Object.defineProperty(exports, 'parseMetafield', {
+  enumerable: true,
+  get: function () { return hydrogenReact.parseMetafield; }
+});
+Object.defineProperty(exports, 'sendShopifyAnalytics', {
+  enumerable: true,
+  get: function () { return hydrogenReact.sendShopifyAnalytics; }
+});
+Object.defineProperty(exports, 'storefrontApiCustomScalars', {
+  enumerable: true,
+  get: function () { return hydrogenReact.storefrontApiCustomScalars; }
+});
+Object.defineProperty(exports, 'useLoadScript', {
+  enumerable: true,
+  get: function () { return hydrogenReact.useLoadScript; }
+});
+Object.defineProperty(exports, 'useMoney', {
+  enumerable: true,
+  get: function () { return hydrogenReact.useMoney; }
+});
+Object.defineProperty(exports, 'useShopifyCookies', {
+  enumerable: true,
+  get: function () { return hydrogenReact.useShopifyCookies; }
+});
+exports.CacheCustom = CacheCustom;
+exports.CacheLong = CacheLong;
+exports.CacheNone = CacheNone;
+exports.CacheShort = CacheShort;
+exports.CartForm = CartForm;
+exports.InMemoryCache = InMemoryCache;
+exports.Pagination = Pagination;
+exports.Seo = Seo;
+exports.VariantSelector = VariantSelector;
+exports.cartAttributesUpdateDefault = cartAttributesUpdateDefault;
+exports.cartBuyerIdentityUpdateDefault = cartBuyerIdentityUpdateDefault;
+exports.cartCreateDefault = cartCreateDefault;
+exports.cartDiscountCodesUpdateDefault = cartDiscountCodesUpdateDefault;
+exports.cartGetDefault = cartGetDefault;
+exports.cartGetIdDefault = cartGetIdDefault;
+exports.cartLinesAddDefault = cartLinesAddDefault;
+exports.cartLinesRemoveDefault = cartLinesRemoveDefault;
+exports.cartLinesUpdateDefault = cartLinesUpdateDefault;
+exports.cartMetafieldDeleteDefault = cartMetafieldDeleteDefault;
+exports.cartMetafieldsSetDefault = cartMetafieldsSetDefault;
+exports.cartNoteUpdateDefault = cartNoteUpdateDefault;
+exports.cartSelectedDeliveryOptionsUpdateDefault = cartSelectedDeliveryOptionsUpdateDefault;
+exports.cartSetIdDefault = cartSetIdDefault;
+exports.createCartHandler = createCartHandler;
+exports.createStorefrontClient = createStorefrontClient;
+exports.createWithCache = createWithCache;
+exports.generateCacheControlHeader = generateCacheControlHeader;
+exports.getPaginationVariables = getPaginationVariables;
+exports.getSelectedProductOptions = getSelectedProductOptions;
+exports.graphiqlLoader = graphiqlLoader;
+exports.isStorefrontApiError = isStorefrontApiError;
+exports.storefrontRedirect = storefrontRedirect;
+//# sourceMappingURL=out.js.map
+//# sourceMappingURL=index.cjs.map

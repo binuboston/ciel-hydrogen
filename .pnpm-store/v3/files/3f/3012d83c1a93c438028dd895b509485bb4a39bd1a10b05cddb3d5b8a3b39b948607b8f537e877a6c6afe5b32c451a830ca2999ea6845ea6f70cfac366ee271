@@ -1,0 +1,27 @@
+import { AbortError } from '@shopify/cli-kit/node/error';
+import { graphqlRequest } from '@shopify/cli-kit/node/api/graphql';
+
+async function adminRequest(query, session, variables) {
+  const api = "Admin";
+  const url = `https://${session.storeFqdn}/admin/api/unstable/graphql.json`;
+  try {
+    return await graphqlRequest({
+      query,
+      api,
+      url,
+      token: session.token,
+      variables
+    });
+  } catch (error) {
+    const errors = error.errors;
+    if (errors?.some?.((error2) => error2.message.includes("app is not installed"))) {
+      throw new AbortError(
+        "Hydrogen sales channel isn't installed",
+        "Install the Hydrogen sales channel on your store to start creating and linking Hydrogen storefronts: https://apps.shopify.com/hydrogen"
+      );
+    }
+    throw error;
+  }
+}
+
+export { adminRequest };

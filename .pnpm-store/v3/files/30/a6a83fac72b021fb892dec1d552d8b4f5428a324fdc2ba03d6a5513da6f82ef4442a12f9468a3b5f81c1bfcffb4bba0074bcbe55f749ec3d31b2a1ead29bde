@@ -1,0 +1,37 @@
+import { vi, describe, afterEach, it, expect } from 'vitest';
+import { adminRequest } from './client.js';
+import { getStorefrontEnvVariables } from './pull-variables.js';
+
+vi.mock("./client.js");
+describe("getStorefrontEnvVariables", () => {
+  const ADMIN_SESSION = {
+    token: "abc123",
+    storeFqdn: "my-shop.myshopify.com"
+  };
+  afterEach(() => {
+    vi.resetAllMocks();
+  });
+  it("calls the graphql client and returns Hydrogen storefronts", async () => {
+    const mockedResponse = {
+      hydrogenStorefront: {
+        id: "123",
+        environmentVariables: [
+          { id: "123", isSecret: false, key: "key", value: "value" }
+        ]
+      }
+    };
+    vi.mocked(adminRequest).mockResolvedValue(
+      mockedResponse
+    );
+    const id = "123";
+    const branch = "staging";
+    await expect(
+      getStorefrontEnvVariables(ADMIN_SESSION, id, branch)
+    ).resolves.toStrictEqual(mockedResponse.hydrogenStorefront);
+    expect(adminRequest).toHaveBeenCalledWith(
+      expect.stringMatching(/^#graphql.+query.+hydrogenStorefront\(/s),
+      ADMIN_SESSION,
+      { id, branch }
+    );
+  });
+});
