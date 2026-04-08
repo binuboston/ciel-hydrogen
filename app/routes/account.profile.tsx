@@ -8,6 +8,10 @@ import {
   useNavigation,
   useOutletContext,
 } from '@remix-run/react';
+import {Button} from '~/components/ui/button';
+import {Input} from '~/components/ui/input';
+import {Label} from '~/components/ui/label';
+import {Card, CardContent, CardHeader, CardTitle} from '~/components/ui/card';
 
 export type ActionResponse = {
   error: string | null;
@@ -109,14 +113,16 @@ export default function AccountProfile() {
   const customer = action?.customer ?? account?.customer;
 
   return (
-    <div className="account-profile">
-      <h2>My profile</h2>
-      <br />
-      <Form method="PUT">
-        <legend>Personal information</legend>
-        <fieldset>
-          <label htmlFor="firstName">First name</label>
-          <input
+    <div className="space-y-4">
+      <h2 className="text-2xl font-semibold">My profile</h2>
+      <Form className="space-y-4" method="PUT">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Personal information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+          <Label htmlFor="firstName">First name</Label>
+          <Input
             id="firstName"
             name="firstName"
             type="text"
@@ -126,8 +132,8 @@ export default function AccountProfile() {
             defaultValue={customer.firstName ?? ''}
             minLength={2}
           />
-          <label htmlFor="lastName">Last name</label>
-          <input
+          <Label htmlFor="lastName">Last name</Label>
+          <Input
             id="lastName"
             name="lastName"
             type="text"
@@ -137,8 +143,8 @@ export default function AccountProfile() {
             defaultValue={customer.lastName ?? ''}
             minLength={2}
           />
-          <label htmlFor="phone">Mobile</label>
-          <input
+          <Label htmlFor="phone">Mobile</Label>
+          <Input
             id="phone"
             name="phone"
             type="tel"
@@ -147,8 +153,8 @@ export default function AccountProfile() {
             aria-label="Mobile"
             defaultValue={customer.phone ?? ''}
           />
-          <label htmlFor="email">Email address</label>
-          <input
+          <Label htmlFor="email">Email address</Label>
+          <Input
             id="email"
             name="email"
             type="email"
@@ -158,7 +164,7 @@ export default function AccountProfile() {
             aria-label="Email address"
             defaultValue={customer.email ?? ''}
           />
-          <div className="account-profile-marketing">
+          <div className="flex items-center gap-2">
             <input
               id="acceptsMarketing"
               name="acceptsMarketing"
@@ -167,16 +173,20 @@ export default function AccountProfile() {
               aria-label="Accept marketing"
               defaultChecked={customer.acceptsMarketing}
             />
-            <label htmlFor="acceptsMarketing">
-              &nbsp; Subscribed to marketing communications
-            </label>
+            <Label htmlFor="acceptsMarketing">
+              Subscribed to marketing communications
+            </Label>
           </div>
-        </fieldset>
-        <br />
-        <legend>Change password (optional)</legend>
-        <fieldset>
-          <label htmlFor="currentPassword">Current password</label>
-          <input
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Change password (optional)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+          <Label htmlFor="currentPassword">Current password</Label>
+          <Input
             id="currentPassword"
             name="currentPassword"
             type="password"
@@ -186,8 +196,8 @@ export default function AccountProfile() {
             minLength={8}
           />
 
-          <label htmlFor="newPassword">New password</label>
-          <input
+          <Label htmlFor="newPassword">New password</Label>
+          <Input
             id="newPassword"
             name="newPassword"
             type="password"
@@ -196,8 +206,8 @@ export default function AccountProfile() {
             minLength={8}
           />
 
-          <label htmlFor="newPasswordConfirm">New password (confirm)</label>
-          <input
+          <Label htmlFor="newPasswordConfirm">New password (confirm)</Label>
+          <Input
             id="newPasswordConfirm"
             name="newPasswordConfirm"
             type="password"
@@ -205,20 +215,20 @@ export default function AccountProfile() {
             aria-label="New password confirm"
             minLength={8}
           />
-          <small>Passwords must be at least 8 characters.</small>
-        </fieldset>
+          <small className="text-muted-foreground">
+            Passwords must be at least 8 characters.
+          </small>
+          </CardContent>
+        </Card>
+
         {action?.error ? (
-          <p>
-            <mark>
-              <small>{action.error}</small>
-            </mark>
+          <p className="text-sm text-destructive">
+            <small>{action.error}</small>
           </p>
-        ) : (
-          <br />
-        )}
-        <button type="submit" disabled={state !== 'idle'}>
+        ) : null}
+        <Button type="submit" disabled={state !== 'idle'}>
           {state !== 'idle' ? 'Updating' : 'Update'}
-        </button>
+        </Button>
       </Form>
     </div>
   );

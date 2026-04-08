@@ -1,10 +1,20 @@
 import {useMatches, NavLink} from '@remix-run/react';
 import type {FooterQuery} from 'storefrontapi.generated';
+import {cn} from '~/lib/utils';
+import {BrandContainer} from '~/components/ui/brand';
+import {buttonVariants} from '~/components/ui/button';
 
 export function Footer({menu}: FooterQuery) {
   return (
-    <footer className="footer">
-      <FooterMenu menu={menu} />
+    <footer className="mt-auto border-t bg-background">
+      <BrandContainer>
+        <div className="py-6">
+          <FooterMenu menu={menu} />
+          <p className="mt-4 text-xs text-muted-foreground">
+            © {new Date().getFullYear()} Powered by Shopify
+          </p>
+        </div>
+      </BrandContainer>
     </footer>
   );
 }
@@ -13,7 +23,7 @@ function FooterMenu({menu}: Pick<FooterQuery, 'menu'>) {
   const [root] = useMatches();
   const publicStoreDomain = root?.data?.publicStoreDomain;
   return (
-    <nav className="footer-menu" role="navigation">
+    <nav className="flex flex-wrap items-center gap-0.5" role="navigation">
       {(menu || FALLBACK_FOOTER_MENU).items.map((item) => {
         if (!item.url) return null;
         // if the url is internal, we strip the domain
@@ -24,15 +34,27 @@ function FooterMenu({menu}: Pick<FooterQuery, 'menu'>) {
             : item.url;
         const isExternal = !url.startsWith('/');
         return isExternal ? (
-          <a href={url} key={item.id} rel="noopener noreferrer" target="_blank">
+          <a
+            className={cn(buttonVariants({size: 'sm', variant: 'ghost'}), 'rounded-none px-2 uppercase text-[11px] tracking-wide')}
+            href={url}
+            key={item.id}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
             {item.title}
           </a>
         ) : (
           <NavLink
+            className={({isActive}) =>
+              cn(
+                buttonVariants({size: 'sm', variant: 'ghost'}),
+                'rounded-none px-2 uppercase text-[11px] tracking-wide',
+                isActive && 'bg-muted text-foreground',
+              )
+            }
             end
             key={item.id}
             prefetch="intent"
-            style={activeLinkStyle}
             to={url}
           >
             {item.title}
@@ -84,16 +106,3 @@ const FALLBACK_FOOTER_MENU = {
     },
   ],
 };
-
-function activeLinkStyle({
-  isActive,
-  isPending,
-}: {
-  isActive: boolean;
-  isPending: boolean;
-}) {
-  return {
-    fontWeight: isActive ? 'bold' : '',
-    color: isPending ? 'grey' : 'white',
-  };
-}

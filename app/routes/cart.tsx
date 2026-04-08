@@ -6,6 +6,9 @@ import type {V2_MetaFunction} from '@shopify/remix-oxygen';
 import {type ActionArgs, json} from '@shopify/remix-oxygen';
 import type {CartApiQueryFragment} from 'storefrontapi.generated';
 import {CartMain} from '~/components/Cart';
+import {BrandContainer, BrandPageSection} from '~/components/ui/brand';
+import {SectionHeader} from '~/components/ui/commerce/section-header';
+import {Card, CardContent, CardHeader, CardTitle} from '~/components/ui/card';
 
 export const meta: V2_MetaFunction = () => {
   return [{title: `Hydrogen | Cart`}];
@@ -90,15 +93,49 @@ export default function Cart() {
   const cart = root.data?.cart as Promise<CartApiQueryFragment | null>;
 
   return (
-    <div className="cart">
-      <h1>Cart</h1>
-      <Suspense fallback={<p>Loading cart ...</p>}>
-        <Await errorElement={<div>An error occurred</div>} resolve={cart}>
-          {(cart) => {
-            return <CartMain layout="page" cart={cart} />;
-          }}
-        </Await>
-      </Suspense>
+    <BrandContainer>
+      <BrandPageSection className="space-y-4">
+        <SectionHeader title="Cart" />
+        <Suspense fallback={<p>Loading cart ...</p>}>
+          <Await errorElement={<div>An error occurred</div>} resolve={cart}>
+            {(cart) => {
+              return <CartMain layout="page" cart={cart} />;
+            }}
+          </Await>
+        </Suspense>
+        <CartTrustPanel />
+      </BrandPageSection>
+    </BrandContainer>
+  );
+}
+
+function CartTrustPanel() {
+  return (
+    <div className="mt-6 grid gap-4 md:grid-cols-3">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Secure payments</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          Encrypted checkout with major payment providers.
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Fast shipping</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          Most orders ship within 24 hours.
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Easy returns</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">
+          30-day returns with no restocking fees.
+        </CardContent>
+      </Card>
     </div>
   );
 }

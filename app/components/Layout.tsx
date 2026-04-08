@@ -13,6 +13,8 @@ import {
   PredictiveSearchForm,
   PredictiveSearchResults,
 } from '~/components/Search';
+import {Button} from '~/components/ui/button';
+import {Input} from '~/components/ui/input';
 
 export type LayoutProps = {
   cart: Promise<CartApiQueryFragment | null>;
@@ -35,7 +37,7 @@ export function Layout({
       <SearchAside />
       <MobileMenuAside menu={header.menu} />
       <Header header={header} cart={cart} isLoggedIn={isLoggedIn} />
-      <main>{children}</main>
+      <main className="min-h-[calc(100vh-8rem)]">{children}</main>
       <Suspense>
         <Await resolve={footer}>
           {(footer) => <Footer menu={footer.menu} />}
@@ -62,12 +64,11 @@ function CartAside({cart}: {cart: LayoutProps['cart']}) {
 function SearchAside() {
   return (
     <Aside id="search-aside" heading="SEARCH">
-      <div className="predictive-search">
-        <br />
+      <div className="space-y-4">
         <PredictiveSearchForm>
           {({fetchResults, inputRef}) => (
-            <div>
-              <input
+            <div className="flex items-center gap-2">
+              <Input
                 name="q"
                 onChange={fetchResults}
                 onFocus={fetchResults}
@@ -75,8 +76,9 @@ function SearchAside() {
                 ref={inputRef}
                 type="search"
               />
-              &nbsp;
-              <button type="submit">Search</button>
+              <Button type="submit" variant="secondary">
+                Search
+              </Button>
             </div>
           )}
         </PredictiveSearchForm>

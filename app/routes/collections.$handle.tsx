@@ -1,14 +1,16 @@
 import type {V2_MetaFunction} from '@shopify/remix-oxygen';
 import {json, redirect, type LoaderArgs} from '@shopify/remix-oxygen';
-import {useLoaderData, Link} from '@remix-run/react';
-import {
-  Pagination,
-  getPaginationVariables,
-  Image,
-  Money,
-} from '@shopify/hydrogen';
+import {useLoaderData, Link, useSearchParams} from '@remix-run/react';
+import {Pagination, getPaginationVariables, Image, Money} from '@shopify/hydrogen';
 import type {ProductItemFragment} from 'storefrontapi.generated';
 import {useVariantUrl} from '~/utils';
+import {BrandContainer, BrandPageSection} from '~/components/ui/brand';
+import {SectionHeader} from '~/components/ui/commerce/section-header';
+import {Card, CardContent, CardHeader, CardTitle} from '~/components/ui/card';
+import {Button} from '~/components/ui/button';
+import {PriceBadge} from '~/components/ui/commerce/price-badge';
+import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger} from '~/components/ui/sheet';
+import {Badge} from '~/components/ui/badge';
 
 export const meta: V2_MetaFunction = ({data}) => {
   return [{title: `Hydrogen | ${data.collection.title} Collection`}];
@@ -20,13 +22,22 @@ export async function loader({request, params, context}: LoaderArgs) {
   const paginationVariables = getPaginationVariables(request, {
     pageBy: 8,
   });
+  const url = new URL(request.url);
+  const sort = url.searchParams.get('sort') ?? 'featured';
+  const sortMap = {
+    featured: {sortKey: 'COLLECTION_DEFAULT', reverse: false},
+    newest: {sortKey: 'CREATED', reverse: true},
+    priceLow: {sortKey: 'PRICE', reverse: false},
+    priceHigh: {sortKey: 'PRICE', reverse: true},
+  } as const;
+  const selectedSort = sortMap[sort as keyof typeof sortMap] ?? sortMap.featured;
 
   if (!handle) {
     return redirect('/collections');
   }
 
   const {collection} = await storefront.query(COLLECTION_QUERY, {
-    variables: {handle, ...paginationVariables},
+    variables: {handle, ...paginationVariables, ...selectedSort},
   });
 
   if (!collection) {
@@ -39,32 +50,122 @@ export async function loader({request, params, context}: LoaderArgs) {
 
 export default function Collection() {
   const {collection} = useLoaderData<typeof loader>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const inStockOnly = searchParams.get('inStock') === '1';
+  const sort = searchParams.get('sort') ?? 'featured';
+  const setParam = (key: string, value: string | null) => {
+    const next = new URLSearchParams(searchParams);
+    if (value === null) {
+      next.delete(key);
+    } else {
+      next.set(key, value);
+    }
+    setSearchParams(next, {replace: true});
+  };
 
   return (
-    <div className="collection">
-      <h1>{collection.title}</h1>
-      <p className="collection-description">{collection.description}</p>
-      <Pagination connection={collection.products}>
-        {({nodes, isLoading, PreviousLink, NextLink}) => (
-          <>
-            <PreviousLink>
-              {isLoading ? 'Loading...' : <span>↑ Load previous</span>}
-            </PreviousLink>
-            <ProductsGrid products={nodes} />
-            <br />
-            <NextLink>
-              {isLoading ? 'Loading...' : <span>Load more ↓</span>}
-            </NextLink>
-          </>
-        )}
-      </Pagination>
-    </div>
+    <BrandContainer>
+      <BrandPageSection>
+        <SectionHeader
+          description={collection.description}
+          title={collection.title}
+        />
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button className="rounded-none uppercase tracking-wide" size="sm" variant="outline">Filters & Sort</Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Browse controls</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4 space-y-4">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Sort</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      {id: 'featured', label: 'Featured'},
+                      {id: 'newest', label: 'Newest'},
+                      {id: 'priceLow', label: 'Price: Low to high'},
+                      {id: 'priceHigh', label: 'Price: High to low'},
+                    ].map((item) => (
+                      <Button
+                        key={item.id}
+                        onClick={() => setParam('sort', item.id)}
+                        size="sm"
+                        type="button"
+                        variant={sort === item.id ? 'default' : 'outline'}
+                      >
+                        {item.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Filter</p>
+                  <Button
+                    onClick={() => setParam('inStock', inStockOnly ? null : '1')}
+                    size="sm"
+                    type="button"
+                    variant={inStockOnly ? 'default' : 'outline'}
+                  >
+                    In stock only
+                  </Button>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+          <Badge className="rounded-none uppercase" variant="secondary">Browsing</Badge>
+          {inStockOnly ? (
+              <Button
+                className="rounded-none uppercase tracking-wide"
+              onClick={() => setParam('inStock', null)}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              Clear stock filter
+            </Button>
+          ) : null}
+        </div>
+        <Pagination connection={collection.products}>
+          {({nodes, isLoading, PreviousLink, NextLink}) => (
+            <div className="space-y-4">
+              <PreviousLink>
+                {isLoading ? (
+                  'Loading...'
+                ) : (
+                  <Button className="rounded-none uppercase tracking-wide" type="button" variant="outline">
+                    ↑ Load previous
+                  </Button>
+                )}
+              </PreviousLink>
+              <ProductsGrid
+                products={nodes.filter((product) => {
+                  if (!inStockOnly) return true;
+                  return Boolean(product.variants.nodes[0]?.availableForSale);
+                })}
+              />
+              <NextLink>
+                {isLoading ? (
+                  'Loading...'
+                ) : (
+                  <Button className="rounded-none uppercase tracking-wide" type="button" variant="outline">
+                    Load more ↓
+                  </Button>
+                )}
+              </NextLink>
+            </div>
+          )}
+        </Pagination>
+      </BrandPageSection>
+    </BrandContainer>
   );
 }
 
 function ProductsGrid({products}: {products: ProductItemFragment[]}) {
   return (
-    <div className="products-grid">
+    <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       {products.map((product, index) => {
         return (
           <ProductItem
@@ -89,24 +190,32 @@ function ProductItem({
   const variantUrl = useVariantUrl(product.handle, variant.selectedOptions);
   return (
     <Link
-      className="product-item"
+      className="block"
       key={product.id}
       prefetch="intent"
       to={variantUrl}
     >
-      {product.featuredImage && (
-        <Image
-          alt={product.featuredImage.altText || product.title}
-          aspectRatio="1/1"
-          data={product.featuredImage}
-          loading={loading}
-          sizes="(min-width: 45em) 400px, 100vw"
-        />
-      )}
-      <h4>{product.title}</h4>
-      <small>
-        <Money data={product.priceRange.minVariantPrice} />
-      </small>
+      <Card className="h-full overflow-hidden transition-colors hover:border-primary/50">
+        {product.featuredImage && (
+          <Image
+            alt={product.featuredImage.altText || product.title}
+            aspectRatio="1/1"
+            className="h-auto w-full object-cover"
+            data={product.featuredImage}
+            loading={loading}
+            sizes="(min-width: 45em) 400px, 100vw"
+          />
+        )}
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">{product.title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PriceBadge price={product.priceRange.minVariantPrice} />
+          <span className="sr-only">
+            <Money data={product.priceRange.minVariantPrice} />
+          </span>
+        </CardContent>
+      </Card>
     </Link>
   );
 }
@@ -137,6 +246,7 @@ const PRODUCT_ITEM_FRAGMENT = `#graphql
     }
     variants(first: 1) {
       nodes {
+        availableForSale
         selectedOptions {
           name
           value
@@ -157,6 +267,8 @@ const COLLECTION_QUERY = `#graphql
     $last: Int
     $startCursor: String
     $endCursor: String
+    $sortKey: ProductCollectionSortKeys
+    $reverse: Boolean
   ) @inContext(country: $country, language: $language) {
     collection(handle: $handle) {
       id
@@ -167,7 +279,9 @@ const COLLECTION_QUERY = `#graphql
         first: $first,
         last: $last,
         before: $startCursor,
-        after: $endCursor
+        after: $endCursor,
+        sortKey: $sortKey,
+        reverse: $reverse
       ) {
         nodes {
           ...ProductItem

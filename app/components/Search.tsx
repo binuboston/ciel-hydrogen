@@ -8,6 +8,9 @@ import {
 import {Image, Money, Pagination} from '@shopify/hydrogen';
 import React, {useRef, useEffect} from 'react';
 import {useFetchers} from '@remix-run/react';
+import {Button} from '~/components/ui/button';
+import {Input} from '~/components/ui/input';
+import {Card, CardContent, CardHeader, CardTitle} from '~/components/ui/card';
 
 import type {
   PredictiveProductFragment,
@@ -88,16 +91,17 @@ export function SearchForm({searchTerm}: {searchTerm: string}) {
   }, []);
 
   return (
-    <Form method="get">
-      <input
+    <Form className="space-y-2" method="get">
+      <Input
         defaultValue={searchTerm}
         name="q"
         placeholder="Search…"
         ref={inputRef}
         type="search"
       />
-      &nbsp;
-      <button type="submit">Search</button>
+      <Button className="mt-2 rounded-none uppercase tracking-wide" type="submit" variant="secondary">
+        Search
+      </Button>
     </Form>
   );
 }
@@ -110,7 +114,7 @@ export function SearchResults({
   }
   const keys = Object.keys(results) as Array<keyof typeof results>;
   return (
-    <div>
+    <div className="space-y-4">
       {results &&
         keys.map((type) => {
           const resourceResults = results[type];
@@ -150,27 +154,29 @@ export function SearchResults({
 
 function SearchResultsProductsGrid({products}: Pick<SearchQuery, 'products'>) {
   return (
-    <div className="search-result">
-      <h3>Products</h3>
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Products</CardTitle>
+      </CardHeader>
+      <CardContent>
       <Pagination connection={products}>
         {({nodes, isLoading, NextLink, PreviousLink}) => {
           const itemsMarkup = nodes.map((product) => (
-            <div className="search-results-item" key={product.id}>
+            <div className="py-1" key={product.id}>
               <Link prefetch="intent" to={`/products/${product.handle}`}>
                 <span>{product.title}</span>
               </Link>
             </div>
           ));
           return (
-            <div>
+            <div className="space-y-2">
               <div>
                 <PreviousLink>
                   {isLoading ? 'Loading...' : <span>↑ Load previous</span>}
                 </PreviousLink>
               </div>
-              <div>
+              <div className="py-1">
                 {itemsMarkup}
-                <br />
               </div>
               <div>
                 <NextLink>
@@ -181,49 +187,76 @@ function SearchResultsProductsGrid({products}: Pick<SearchQuery, 'products'>) {
           );
         }}
       </Pagination>
-      <br />
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
 function SearchResultPageGrid({pages}: Pick<SearchQuery, 'pages'>) {
   return (
-    <div className="search-result">
-      <h2>Pages</h2>
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Pages</CardTitle>
+      </CardHeader>
+      <CardContent>
       <div>
         {pages?.nodes?.map((page) => (
-          <div className="search-results-item" key={page.id}>
+          <div className="py-1" key={page.id}>
             <Link prefetch="intent" to={`/pages/${page.handle}`}>
               {page.title}
             </Link>
           </div>
         ))}
       </div>
-      <br />
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
 function SearchResultArticleGrid({articles}: Pick<SearchQuery, 'articles'>) {
   return (
-    <div className="search-result">
-      <h2>Articles</h2>
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Articles</CardTitle>
+      </CardHeader>
+      <CardContent>
       <div>
         {articles?.nodes?.map((article) => (
-          <div className="search-results-item" key={article.id}>
+          <div className="py-1" key={article.id}>
             <Link prefetch="intent" to={`/blog/${article.handle}`}>
               {article.title}
             </Link>
           </div>
         ))}
       </div>
-      <br />
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
-export function NoSearchResults() {
-  return <p>No results, try a different search.</p>;
+export function NoSearchResults({searchTerm = ''}: {searchTerm?: string}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">No results found</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          {searchTerm
+            ? `No matches for "${searchTerm}".`
+            : 'Try searching for products, pages, or articles.'}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Link to="/collections">
+            <Button className="rounded-none uppercase tracking-wide" size="sm" variant="secondary">Continue shopping</Button>
+          </Link>
+          <Link to="/collections">
+            <Button className="rounded-none uppercase tracking-wide" size="sm" variant="outline">Popular products</Button>
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 type ChildrenRenderProps = {
@@ -246,7 +279,7 @@ type SearchFromProps = {
 export function PredictiveSearchForm({
   action,
   children,
-  className = 'predictive-search-form',
+  className = 'space-y-3',
   method = 'POST',
   ...props
 }: SearchFromProps) {
@@ -306,7 +339,7 @@ export function PredictiveSearchResults() {
     return <NoPredictiveSearchResults searchTerm={searchTerm} />;
   }
   return (
-    <div className="predictive-search-results">
+    <div className="space-y-4">
       <div>
         {results.map(({type, items}) => (
           <PredictiveSearchResult
@@ -365,11 +398,11 @@ function PredictiveSearchResult({
   }&type=${pluralToSingularSearchType(type)}`;
 
   return (
-    <div className="predictive-search-result" key={type}>
+    <div className="space-y-2" key={type}>
       <Link prefetch="intent" to={categoryUrl} onClick={goToSearchResult}>
         <h5>{isSuggestions ? 'Suggestions' : type}</h5>
       </Link>
-      <ul>
+      <ul className="space-y-2">
         {items.map((item: NormalizedPredictiveSearchResultItem) => (
           <SearchResultItem
             goToSearchResult={goToSearchResult}
@@ -388,8 +421,8 @@ type SearchResultItemProps = Pick<SearchResultTypeProps, 'goToSearchResult'> & {
 
 function SearchResultItem({goToSearchResult, item}: SearchResultItemProps) {
   return (
-    <li className="predictive-search-result-item" key={item.id}>
-      <Link onClick={goToSearchResult} to={item.url}>
+    <li className="rounded-md border p-2" key={item.id}>
+      <Link className="flex items-center gap-3" onClick={goToSearchResult} to={item.url}>
         {item.image?.url && (
           <Image
             alt={item.image.altText ?? ''}

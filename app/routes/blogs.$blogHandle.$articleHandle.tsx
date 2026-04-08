@@ -2,6 +2,8 @@ import type {V2_MetaFunction} from '@shopify/remix-oxygen';
 import {json, type LoaderArgs} from '@shopify/remix-oxygen';
 import {useLoaderData} from '@remix-run/react';
 import {Image} from '@shopify/hydrogen';
+import {BrandContainer, BrandPageSection} from '~/components/ui/brand';
+import {Card, CardContent} from '~/components/ui/card';
 
 export const meta: V2_MetaFunction = ({data}) => {
   return [{title: `Hydrogen | ${data.article.title} article`}];
@@ -38,20 +40,33 @@ export default function Article() {
   }).format(new Date(article.publishedAt));
 
   return (
-    <div className="article">
-      <h1>
-        {title}
-        <span>
-          {publishedDate} &middot; {author?.name}
-        </span>
-      </h1>
+    <BrandContainer>
+      <BrandPageSection className="space-y-5">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
+          <p className="text-sm text-muted-foreground">
+            {publishedDate} &middot; {author?.name}
+          </p>
+        </div>
 
-      {image && <Image data={image} sizes="90vw" loading="eager" />}
-      <div
-        dangerouslySetInnerHTML={{__html: contentHtml}}
-        className="article"
-      />
-    </div>
+        {image && (
+          <div className="overflow-hidden rounded-lg border">
+            <Image
+              className="h-auto w-full object-cover"
+              data={image}
+              loading="eager"
+              sizes="90vw"
+            />
+          </div>
+        )}
+        <Card>
+          <CardContent
+            className="prose prose-sm max-w-none py-4 dark:prose-invert"
+            dangerouslySetInnerHTML={{__html: contentHtml}}
+          />
+        </Card>
+      </BrandPageSection>
+    </BrandContainer>
   );
 }
 

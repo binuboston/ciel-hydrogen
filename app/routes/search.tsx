@@ -4,6 +4,8 @@ import {useLoaderData} from '@remix-run/react';
 import {getPaginationVariables} from '@shopify/hydrogen';
 
 import {SearchForm, SearchResults, NoSearchResults} from '~/components/Search';
+import {BrandContainer, BrandPageSection} from '~/components/ui/brand';
+import {SectionHeader} from '~/components/ui/commerce/section-header';
 
 export const meta: V2_MetaFunction = () => {
   return [{title: `Hydrogen | Search`}];
@@ -48,15 +50,20 @@ export async function loader({request, context}: LoaderArgs) {
 export default function SearchPage() {
   const {searchTerm, searchResults} = useLoaderData<typeof loader>();
   return (
-    <div className="search">
-      <h1>Search</h1>
+    <BrandContainer>
+      <BrandPageSection className="space-y-4">
+      <SectionHeader
+        description="Search products, pages, and articles."
+        title="Search"
+      />
       <SearchForm searchTerm={searchTerm} />
       {!searchTerm || !searchResults.totalResults ? (
-        <NoSearchResults />
+        <NoSearchResults searchTerm={searchTerm} />
       ) : (
         <SearchResults results={searchResults.results} />
       )}
-    </div>
+      </BrandPageSection>
+    </BrandContainer>
   );
 }
 

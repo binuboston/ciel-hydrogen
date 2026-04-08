@@ -1,4 +1,5 @@
 import {Suspense} from 'react';
+import {useEffect} from 'react';
 import type {V2_MetaFunction} from '@shopify/remix-oxygen';
 import {defer, redirect, type LoaderArgs} from '@shopify/remix-oxygen';
 import type {FetcherWithComponents} from '@remix-run/react';
@@ -10,7 +11,6 @@ import type {
 } from 'storefrontapi.generated';
 
 import {
-  Image,
   Money,
   VariantSelector,
   type VariantOption,
@@ -19,6 +19,12 @@ import {
 } from '@shopify/hydrogen';
 import type {CartLineInput} from '@shopify/hydrogen/storefront-api-types';
 import {getVariantUrl} from '~/utils';
+import {BrandContainer, BrandPageSection} from '~/components/ui/brand';
+import {Card, CardContent} from '~/components/ui/card';
+import {Badge} from '~/components/ui/badge';
+import {SectionHeader} from '~/components/ui/commerce/section-header';
+import {ProductMediaCarousel} from '~/components/ui/commerce/product-media-carousel';
+import {cn} from '~/lib/utils';
 
 export const meta: V2_MetaFunction = ({data}) => {
   return [{title: `Hydrogen | ${data.product.title}`}];
@@ -105,32 +111,33 @@ function redirectToFirstVariant({
 export default function Product() {
   const {product, variants} = useLoaderData<typeof loader>();
   const {selectedVariant} = product;
-  return (
-    <div className="product">
-      <ProductImage image={selectedVariant?.image} />
-      <ProductMain
-        selectedVariant={selectedVariant}
-        product={product}
-        variants={variants}
-      />
-    </div>
-  );
-}
 
-function ProductImage({image}: {image: ProductVariantFragment['image']}) {
-  if (!image) {
-    return <div className="product-image" />;
-  }
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('storefront:product_view', {
+        detail: {
+          handle: product.handle,
+          variantId: selectedVariant?.id ?? null,
+        },
+      }),
+    );
+  }, [product.handle, selectedVariant?.id]);
+
   return (
-    <div className="product-image">
-      <Image
-        alt={image.altText || 'Product Image'}
-        aspectRatio="1/1"
-        data={image}
-        key={image.id}
-        sizes="(min-width: 45em) 50vw, 100vw"
-      />
-    </div>
+    <BrandContainer>
+      <BrandPageSection className="grid gap-8 md:grid-cols-2">
+        <ProductMediaCarousel
+          images={product.images.nodes}
+          productTitle={product.title}
+          selectedImageId={selectedVariant?.image?.id}
+        />
+        <ProductMain
+          selectedVariant={selectedVariant}
+          product={product}
+          variants={variants}
+        />
+      </BrandPageSection>
+    </BrandContainer>
   );
 }
 
@@ -145,10 +152,10 @@ function ProductMain({
 }) {
   const {title, descriptionHtml} = product;
   return (
-    <div className="product-main">
-      <h1>{title}</h1>
+    <div className="space-y-4 md:sticky md:top-24 md:self-start">
+      <SectionHeader title={title} />
       <ProductPrice selectedVariant={selectedVariant} />
-      <br />
+      <ProductTrustBar />
       <Suspense
         fallback={
           <ProductForm
@@ -171,14 +178,13 @@ function ProductMain({
           )}
         </Await>
       </Suspense>
-      <br />
-      <br />
-      <p>
-        <strong>Description</strong>
-      </p>
-      <br />
-      <div dangerouslySetInnerHTML={{__html: descriptionHtml}} />
-      <br />
+      <Card>
+        <CardContent className="prose prose-sm max-w-none py-4 dark:prose-invert">
+          <p className="mb-2 font-semibold">Description</p>
+          <div dangerouslySetInnerHTML={{__html: descriptionHtml}} />
+        </CardContent>
+      </Card>
+      <ProductFaq />
     </div>
   );
 }
@@ -189,20 +195,34 @@ function ProductPrice({
   selectedVariant: ProductFragment['selectedVariant'];
 }) {
   return (
-    <div className="product-price">
+    <div>
       {selectedVariant?.compareAtPrice ? (
         <>
-          <p>Sale</p>
-          <br />
-          <div className="product-price-on-sale">
-            {selectedVariant ? <Money data={selectedVariant.price} /> : null}
-            <s>
+          <div className="mb-2">
+            <Badge className="rounded-none uppercase" variant="secondary">Sale</Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            {selectedVariant ? (
+              <span className="font-medium">
+                <Money data={selectedVariant.price} />
+              </span>
+            ) : null}
+            <s className="text-muted-foreground">
               <Money data={selectedVariant.compareAtPrice} />
             </s>
           </div>
         </>
       ) : (
-        selectedVariant?.price && <Money data={selectedVariant?.price} />
+        <div className="space-y-1">
+          {selectedVariant?.price && <Money data={selectedVariant?.price} />}
+          {typeof selectedVariant?.quantityAvailable === 'number' ? (
+            <p className="text-sm text-muted-foreground">
+              {selectedVariant.quantityAvailable > 0
+                ? `${selectedVariant.quantityAvailable} in stock`
+                : 'Out of stock'}
+            </p>
+          ) : null}
+        </div>
       )}
     </div>
   );
@@ -218,7 +238,7 @@ function ProductForm({
   variants: Array<ProductVariantFragment>;
 }) {
   return (
-    <div className="product-form">
+    <div className="space-y-4">
       <VariantSelector
         handle={product.handle}
         options={product.options}
@@ -226,7 +246,6 @@ function ProductForm({
       >
         {({option}) => <ProductOptions key={option.name} option={option} />}
       </VariantSelector>
-      <br />
       <AddToCartButton
         disabled={!selectedVariant || !selectedVariant.availableForSale}
         onClick={() => {
@@ -251,21 +270,31 @@ function ProductForm({
 
 function ProductOptions({option}: {option: VariantOption}) {
   return (
-    <div className="product-options" key={option.name}>
-      <h5>{option.name}</h5>
-      <div className="product-options-grid">
+    <div className="space-y-2" key={option.name}>
+      <h5 className="font-medium">{option.name}</h5>
+      <div className="flex flex-wrap gap-2">
         {option.values.map(({value, isAvailable, isActive, to}) => {
           return (
             <Link
-              className="product-options-item"
+              className={cn(
+                'border px-3 py-1 text-sm uppercase tracking-wide transition-colors',
+                isActive ? 'border-foreground' : 'border-transparent bg-muted',
+                !isAvailable && 'opacity-40',
+              )}
               key={option.name + value}
               prefetch="intent"
               preventScrollReset
               replace
               to={to}
-              style={{
-                border: isActive ? '1px solid black' : '1px solid transparent',
-                opacity: isAvailable ? 1 : 0.3,
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent('storefront:variant_change', {
+                    detail: {
+                      optionName: option.name,
+                      value,
+                    },
+                  }),
+                );
               }}
             >
               {value}
@@ -273,7 +302,6 @@ function ProductOptions({option}: {option: VariantOption}) {
           );
         })}
       </div>
-      <br />
     </div>
   );
 }
@@ -301,15 +329,56 @@ function AddToCartButton({
             value={JSON.stringify(analytics)}
           />
           <button
-            type="submit"
-            onClick={onClick}
+            className={cn(
+              'inline-flex h-10 items-center justify-center rounded-none bg-primary px-5 text-xs font-medium uppercase tracking-wide text-primary-foreground transition-opacity',
+              (disabled ?? fetcher.state !== 'idle') && 'opacity-60',
+            )}
             disabled={disabled ?? fetcher.state !== 'idle'}
+            onClick={onClick}
+            type="submit"
+            onMouseDown={() => {
+              window.dispatchEvent(
+                new CustomEvent('storefront:add_to_cart', {
+                  detail: {lines},
+                }),
+              );
+            }}
           >
             {children}
           </button>
         </>
       )}
     </CartForm>
+  );
+}
+
+function ProductTrustBar() {
+  return (
+    <div className="grid gap-2 text-sm text-muted-foreground md:grid-cols-3">
+      <div className="rounded-md border p-2">Free shipping over $75</div>
+      <div className="rounded-md border p-2">30-day returns</div>
+      <div className="rounded-md border p-2">Secure checkout</div>
+    </div>
+  );
+}
+
+function ProductFaq() {
+  return (
+    <div className="space-y-2">
+      <p className="font-medium">Frequently asked questions</p>
+      <details className="rounded-md border p-3">
+        <summary className="cursor-pointer font-medium">How long is shipping?</summary>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Standard delivery takes 3-5 business days.
+        </p>
+      </details>
+      <details className="rounded-md border p-3">
+        <summary className="cursor-pointer font-medium">Can I return this item?</summary>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Yes, returns are accepted within 30 days in original condition.
+        </p>
+      </details>
+    </div>
   );
 }
 
@@ -359,6 +428,15 @@ const PRODUCT_FRAGMENT = `#graphql
     handle
     descriptionHtml
     description
+    images(first: 12) {
+      nodes {
+        id
+        altText
+        url
+        width
+        height
+      }
+    }
     options {
       name
       values

@@ -1,13 +1,11 @@
-/**
- * A side bar component with Overlay that works without JavaScript.
- * @example
- * ```ts
- * <Aside id="search-aside" heading="SEARCH">`
- *  <input type="search" />
- *  ...
- * </Aside>
- * ```
- */
+import {useEffect, useState} from 'react';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '~/components/ui/sheet';
+
 export function Aside({
   children,
   heading,
@@ -17,31 +15,35 @@ export function Aside({
   heading: React.ReactNode;
   id?: string;
 }) {
-  return (
-    <div aria-modal className="overlay" id={id} role="dialog">
-      <button
-        className="close-outside"
-        onClick={() => {
-          history.go(-1);
-          window.location.hash = '';
-        }}
-      />
-      <aside>
-        <header>
-          <h3>{heading}</h3>
-          <CloseAside />
-        </header>
-        <main>{children}</main>
-      </aside>
-    </div>
-  );
-}
+  const [open, setOpen] = useState(false);
 
-function CloseAside() {
+  useEffect(() => {
+    const syncStateWithHash = () => {
+      setOpen(window.location.hash === `#${id}`);
+    };
+
+    syncStateWithHash();
+    window.addEventListener('hashchange', syncStateWithHash);
+    return () => {
+      window.removeEventListener('hashchange', syncStateWithHash);
+    };
+  }, [id]);
+
+  const onOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen && window.location.hash === `#${id}`) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  };
+
   return (
-    /* eslint-disable-next-line jsx-a11y/anchor-is-valid */
-    <a className="close" href="#" onChange={() => history.go(-1)}>
-      &times;
-    </a>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-md" side="right">
+        <SheetHeader className="border-b pb-3">
+          <SheetTitle>{heading}</SheetTitle>
+        </SheetHeader>
+        <main className="h-[calc(100vh-4.75rem)] overflow-y-auto p-4">{children}</main>
+      </SheetContent>
+    </Sheet>
   );
 }

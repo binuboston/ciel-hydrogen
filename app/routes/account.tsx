@@ -1,6 +1,9 @@
 import {Form, NavLink, Outlet, useLoaderData} from '@remix-run/react';
 import {json, redirect, type LoaderArgs} from '@shopify/remix-oxygen';
 import type {CustomerFragment} from 'storefrontapi.generated';
+import {BrandContainer, BrandPageSection} from '~/components/ui/brand';
+import {Button, buttonVariants} from '~/components/ui/button';
+import {cn} from '~/lib/utils';
 
 export function shouldRevalidate() {
   return true;
@@ -85,8 +88,6 @@ export default function Acccount() {
 
   return (
     <AccountLayout customer={customer as CustomerFragment}>
-      <br />
-      <br />
       <Outlet context={{customer}} />
     </AccountLayout>
   );
@@ -106,42 +107,52 @@ function AccountLayout({
     : 'Account Details';
 
   return (
-    <div className="account">
-      <h1>{heading}</h1>
-      <br />
+    <BrandContainer>
+      <BrandPageSection className="space-y-5">
+      <h1 className="text-3xl font-semibold tracking-tight">{heading}</h1>
       <AcccountMenu />
       {children}
-    </div>
+      </BrandPageSection>
+    </BrandContainer>
   );
 }
 
 function AcccountMenu() {
-  function isActiveStyle({
-    isActive,
-    isPending,
-  }: {
-    isActive: boolean;
-    isPending: boolean;
-  }) {
-    return {
-      fontWeight: isActive ? 'bold' : '',
-      color: isPending ? 'grey' : 'black',
-    };
-  }
   return (
-    <nav role="navigation">
-      <NavLink to="/account/orders" style={isActiveStyle}>
-        Orders &nbsp;
+    <nav className="flex flex-wrap items-center gap-2" role="navigation">
+      <NavLink
+        className={({isActive}) =>
+          cn(
+            buttonVariants({size: 'sm', variant: 'ghost'}),
+            isActive && 'bg-muted text-foreground',
+          )
+        }
+        to="/account/orders"
+      >
+        Orders
       </NavLink>
-      &nbsp;|&nbsp;
-      <NavLink to="/account/profile" style={isActiveStyle}>
-        &nbsp; Profile &nbsp;
+      <NavLink
+        className={({isActive}) =>
+          cn(
+            buttonVariants({size: 'sm', variant: 'ghost'}),
+            isActive && 'bg-muted text-foreground',
+          )
+        }
+        to="/account/profile"
+      >
+        Profile
       </NavLink>
-      &nbsp;|&nbsp;
-      <NavLink to="/account/addresses" style={isActiveStyle}>
-        &nbsp; Addresses &nbsp;
+      <NavLink
+        className={({isActive}) =>
+          cn(
+            buttonVariants({size: 'sm', variant: 'ghost'}),
+            isActive && 'bg-muted text-foreground',
+          )
+        }
+        to="/account/addresses"
+      >
+        Addresses
       </NavLink>
-      &nbsp;|&nbsp;
       <Logout />
     </nav>
   );
@@ -149,8 +160,10 @@ function AcccountMenu() {
 
 function Logout() {
   return (
-    <Form className="account-logout" method="POST" action="/account/logout">
-      &nbsp;<button type="submit">Sign out</button>
+    <Form method="POST" action="/account/logout">
+      <Button type="submit" variant="outline">
+        Sign out
+      </Button>
     </Form>
   );
 }
