@@ -10,12 +10,12 @@ type HeaderProps = Pick<LayoutProps, 'header' | 'cart' | 'isLoggedIn'>;
 type Viewport = 'desktop' | 'mobile';
 
 export function Header({header, isLoggedIn, cart}: HeaderProps) {
-  const {shop, menu} = header;
+  const {menu} = header;
   return (
     <header className="sticky top-0 z-20 border-b bg-background">
       <BrandContainer className="flex h-16 items-center gap-4">
         <NavLink className="text-sm font-semibold tracking-wide uppercase" prefetch="intent" to="/" end>
-          {shop.name}
+          CIEL
         </NavLink>
         <HeaderMenu menu={menu} viewport="desktop" />
         <HeaderCtas isLoggedIn={isLoggedIn} cart={cart} />
